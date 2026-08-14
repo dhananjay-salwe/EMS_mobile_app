@@ -32,7 +32,8 @@ export default function LoginScreen({ onLoginSuccess }) {
   return (
     <SafeAreaView style={styles.container}>
       <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
         style={{ flex: 1 }}
       >
         <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
@@ -83,7 +84,12 @@ export default function LoginScreen({ onLoginSuccess }) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.bodyBg },
-  scroll: { flexGrow: 1, justifyContent: 'center', padding: SPACING.md },
+  scroll: { 
+  flexGrow: 1, 
+  justifyContent: 'center', 
+  padding: SPACING.md,
+  paddingBottom: 80 
+},
   card: {
     backgroundColor: COLORS.card,
     borderRadius: RADIUS.xl,
