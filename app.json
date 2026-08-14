@@ -4,11 +4,11 @@
     "slug": "voting-app",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/icon.png",
+    "icon": "./assets/ems_logo.jpeg",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
     "splash": {
-      "image": "./assets/splash-icon.png",
+      "image": "./assets/ems_logo.jpeg",
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },
@@ -22,14 +22,14 @@
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/adaptive-icon.png",
+        "foregroundImage": "./assets/ems_logo.jpeg",
         "backgroundColor": "#ffffff"
       },
       "edgeToEdgeEnabled": true,
       "usesCleartextTraffic": true
     },
     "web": {
-      "favicon": "./assets/favicon.png"
+      "favicon": "./assets/ems_favicon.jpeg"
     }
   }
 }
