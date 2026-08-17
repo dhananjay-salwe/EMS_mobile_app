@@ -8,8 +8,9 @@ import Button from '../components/Button';
 import { COLORS, RADIUS, SPACING, FONTS, SHADOW } from '../theme';
 
 export default function LoginScreen({ onLoginSuccess }) {
-  const [username, setUsername] = useState('operator_booth_1');
-  const [password, setPassword] = useState('password123');
+// ✅ Empty initial values:
+const [username, setUsername] = useState('');
+const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
 
   const handleLogin = async () => {

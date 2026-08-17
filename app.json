@@ -4,11 +4,11 @@
     "slug": "voting-app",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/ems_logo.jpeg",
+    "icon": "./assets/android/playstore-icon.png",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
     "splash": {
-      "image": "./assets/ems_logo.jpeg",
+      "image": "./assets/android/playstore-icon.png",
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },
@@ -22,14 +22,20 @@
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/ems_logo.jpeg",
+        "foregroundImage": "./assets/android/playstore-icon.png",
         "backgroundColor": "#ffffff"
       },
       "edgeToEdgeEnabled": true,
-      "usesCleartextTraffic": true
+      "usesCleartextTraffic": true,
+      "package": "com.dhananjaysalwe77.votingapp"
     },
     "web": {
-      "favicon": "./assets/ems_favicon.jpeg"
+      "favicon": "./assets/android/ic_launcher-web.png"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "62c8cc5d-173d-425b-9945-124581714b0d"
+      }
     }
   }
 }
