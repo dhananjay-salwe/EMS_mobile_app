@@ -179,7 +179,7 @@ export default function VoteSubmissionScreen({ operator, selectedBooth }) {
         contentContainerStyle={{ padding: SPACING.md }}
         ListHeaderComponent={
           <Text style={styles.sectionLabel}>
-            Enter votes counted for each candidate
+            Booth Voting Report
           </Text>
         }
         renderItem={({ item }) => (

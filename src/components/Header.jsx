@@ -16,7 +16,8 @@ export default function Header({ operator, selectedBooth, onLogout, onChangeBoot
           {selectedBooth ? (
             <View style={styles.boothBadge}>
               <Text style={styles.boothBadgeText} numberOfLines={1}>
-                {selectedBooth.unique_booth_code} · {selectedBooth.booth_name}
+                {selectedBooth.booth_name} ·
+                {selectedBooth.unique_booth_code} 
               </Text>
             </View>
           ) : (

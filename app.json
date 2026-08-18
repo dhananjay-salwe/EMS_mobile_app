@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "voting-app",
+    "name": "EMS",
     "slug": "voting-app",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -22,7 +22,7 @@
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/android/playstore-icon.png",
+        "foregroundImage": "./assets/android/android-foreground.png",
         "backgroundColor": "#ffffff"
       },
       "edgeToEdgeEnabled": true,

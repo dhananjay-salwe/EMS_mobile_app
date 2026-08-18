@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import {
   StyleSheet, Text, View, TextInput, SafeAreaView, Alert,
-  KeyboardAvoidingView, Platform, ScrollView,
+  KeyboardAvoidingView, Platform, ScrollView, Image,
 } from 'react-native';
 import { apiCall } from '../api/client';
 import Button from '../components/Button';
@@ -40,12 +40,19 @@ const [password, setPassword] = useState('');
         <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
           <View style={styles.card}>
             <View style={styles.banner}>
-              <Text style={styles.bannerTitle}>Welcome back!</Text>
-              <Text style={styles.bannerSubtitle}>Sign in to record election results</Text>
+              <Text style={styles.bannerTitle}>Welcome to EMS</Text>
+              <Text style={styles.bannerSubtitle}>Authorized Booth Officer Login</Text>
             </View>
 
-            <View style={styles.logo}>
+            {/* <View style={styles.logo}>
               <Text style={styles.logoText}>⚡</Text>
+            </View> */}
+            <View style={styles.logo}>
+              <Image
+                source={require('../../assets/android/ic_launcher-web.png')}
+                style={styles.logoImage}
+                resizeMode="contain"
+              />
             </View>
 
             <View style={styles.form}>
@@ -128,7 +135,11 @@ const styles = StyleSheet.create({
     marginTop: -32,
     ...SHADOW,
   },
-  logoText: { fontSize: 26 },
+  // logoText: { fontSize: 26 },
+  logoImage: {
+  width: 46,
+  height: 46,
+},
   form: { padding: 26, paddingTop: 22 },
   label: {
     fontSize: 12.5,
