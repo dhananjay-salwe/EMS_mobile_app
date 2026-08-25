@@ -13,6 +13,14 @@ import {
   StyleSheet,
 } from "react-native";
 import * as ImagePicker from "expo-image-picker";
+// OLD CODE:
+// import * as ImageManipulator from "expo-image-manipulator";
+// import { apiCall } from "../api/client";
+// import Button from "../components/Button";
+
+// FEATURE: Import VideoCompressor for compressed video uploading
+import * as ImageManipulator from "expo-image-manipulator";
+import { Video as VideoCompressor } from 'react-native-compressor';
 import { apiCall } from "../api/client";
 import Button from "../components/Button";
 import { COLORS, RADIUS, SPACING, FONTS, SHADOW } from "../theme";
@@ -20,7 +28,14 @@ import { COLORS, RADIUS, SPACING, FONTS, SHADOW } from "../theme";
 export default function VoteSubmissionScreen({ operator, selectedBooth }) {
   const [candidates, setCandidates] = useState([]);
   const [votes, setVotes] = useState({});
+  // OLD CODE:
+  // const [tallyImage, setTallyImage] = useState(null);
+  // const [submitting, setSubmitting] = useState(false);
+  // const [loading, setLoading] = useState(true);
+
+  // FEATURE: Add tallyVideo state and keep existing states
   const [tallyImage, setTallyImage] = useState(null);
+  const [tallyVideo, setTallyVideo] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const [loading, setLoading] = useState(true);
 
@@ -58,6 +73,66 @@ export default function VoteSubmissionScreen({ operator, selectedBooth }) {
     }));
   };
 
+  // OLD CODE:
+  // const pickImage = async () => {
+  //   const { status } = await ImagePicker.requestCameraPermissionsAsync();
+  //   if (status !== "granted") {
+  //     Alert.alert(
+  //       "Permission Denied",
+  //       "Camera access is required to capture the tally sheet.",
+  //     );
+  //     return;
+  //   }
+  // 
+  //   let result = await ImagePicker.launchCameraAsync({
+  //     mediaTypes: ImagePicker.MediaTypeOptions.Images,
+  //     quality: 0.5,
+  //   });
+  // 
+  //   if (!result.canceled && result.assets.length > 0) {
+  //     setTallyImage(result.assets[0]);
+  //   }
+  // };
+  // 
+  // const pickFromGallery = async () => {
+  //   const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+  //   if (status !== "granted") {
+  //     Alert.alert(
+  //       "Permission Denied",
+  //       "Gallery access is required to select tally sheet.",
+  //     );
+  //     return;
+  //   }
+  // 
+  //   let result = await ImagePicker.launchImageLibraryAsync({
+  //     mediaTypes: ImagePicker.MediaTypeOptions.Images,
+  //     quality: 0.7,
+  //   });
+  // 
+  //   if (!result.canceled && result.assets.length > 0) {
+  //     setTallyImage(result.assets[0]);
+  //   }
+  // };
+
+  // FIX: Compress captured camera image to <200KB utilizing expo-image-manipulator
+  const compressAndSetImage = async (uri) => {
+    try {
+      const manipResult = await ImageManipulator.manipulateAsync(
+        uri,
+        [{ resize: { width: 1024 } }],
+        { compress: 0.7, format: ImageManipulator.SaveFormat.JPEG }
+      );
+      setTallyImage({
+        uri: manipResult.uri,
+        width: manipResult.width,
+        height: manipResult.height,
+      });
+    } catch (err) {
+      console.warn("Failed to compress image, using fallback:", err);
+      setTallyImage({ uri });
+    }
+  };
+
   const pickImage = async () => {
     const { status } = await ImagePicker.requestCameraPermissionsAsync();
     if (status !== "granted") {
@@ -70,11 +145,11 @@ export default function VoteSubmissionScreen({ operator, selectedBooth }) {
 
     let result = await ImagePicker.launchCameraAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      quality: 0.5,
+      quality: 0.8,
     });
 
     if (!result.canceled && result.assets.length > 0) {
-      setTallyImage(result.assets[0]);
+      await compressAndSetImage(result.assets[0].uri);
     }
   };
 
@@ -90,13 +165,43 @@ export default function VoteSubmissionScreen({ operator, selectedBooth }) {
 
     let result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      quality: 0.7,
+      quality: 0.8,
     });
 
     if (!result.canceled && result.assets.length > 0) {
-      setTallyImage(result.assets[0]);
+      await compressAndSetImage(result.assets[0].uri);
     }
   };
+
+  // FEATURE: recordVideo function utilizing ImagePicker and VideoCompressor
+  const recordVideo = async () => {
+    const { status } = await ImagePicker.requestCameraPermissionsAsync();
+    if (status !== "granted") {
+      Alert.alert(
+        "Permission Denied",
+        "Camera access is required to record the tally video.",
+      );
+      return;
+    }
+
+    let result = await ImagePicker.launchCameraAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Videos,
+    });
+
+    if (!result.canceled && result.assets.length > 0) {
+      try {
+        const compressedUri = await VideoCompressor.compress(
+          result.assets[0].uri,
+          { compressionMethod: 'auto' }
+        );
+        setTallyVideo(compressedUri);
+      } catch (err) {
+        console.warn("Failed to compress video, using fallback:", err);
+        setTallyVideo(result.assets[0].uri);
+      }
+    }
+  };
+
   const submitData = async () => {
     // Validation
     const votePayload = {};
@@ -123,6 +228,35 @@ export default function VoteSubmissionScreen({ operator, selectedBooth }) {
     setSubmitting(true);
 
     try {
+      // OLD CODE:
+      // const formData = new FormData();
+      // formData.append("operator_id", operator.id);
+      // formData.append("booth_id", selectedBooth.booth_id);
+      // formData.append("votes", JSON.stringify(votePayload));
+      // 
+      // formData.append("tally_sheet", {
+      //   uri: tallyImage.uri,
+      //   name: `tally_${selectedBooth.booth_id}_${Date.now()}.jpg`,
+      //   type: "image/jpeg",
+      // });
+      // 
+      // const data = await apiCall("/votes/submit-votes", "POST", formData, true);
+      // 
+      // if (data.success) {
+      //   Alert.alert(
+      //     "Success!",
+      //     "Vote results and tally sheet photo successfully recorded.",
+      //   );
+      // 
+      //   // Reset form for potential re-submission (or they can just logout)
+      //   const resetVotes = {};
+      //   candidates.forEach((c) => {
+      //     resetVotes[c.candidate_id] = "";
+      //   });
+      //   setVotes(resetVotes);
+      //   setTallyImage(null);
+
+      // FEATURE: Append tally video to formData and reset state on success
       const formData = new FormData();
       formData.append("operator_id", operator.id);
       formData.append("booth_id", selectedBooth.booth_id);
@@ -133,6 +267,14 @@ export default function VoteSubmissionScreen({ operator, selectedBooth }) {
         name: `tally_${selectedBooth.booth_id}_${Date.now()}.jpg`,
         type: "image/jpeg",
       });
+
+      if (tallyVideo) {
+        formData.append("tally_video", {
+          uri: tallyVideo,
+          name: "tally_video.mp4",
+          type: "video/mp4",
+        });
+      }
 
       const data = await apiCall("/votes/submit-votes", "POST", formData, true);
 
@@ -149,6 +291,7 @@ export default function VoteSubmissionScreen({ operator, selectedBooth }) {
         });
         setVotes(resetVotes);
         setTallyImage(null);
+        setTallyVideo(null);
       } else {
         Alert.alert("Submission Failed", data.message || "Error saving votes");
       }
@@ -218,6 +361,7 @@ export default function VoteSubmissionScreen({ operator, selectedBooth }) {
         )}
         ListFooterComponent={
           <View style={styles.footer}>
+            {/* OLD CODE:
             <View style={{ flexDirection: "row", gap: 10, marginBottom: 16 }}>
               <View style={{ flex: 1 }}>
                 <Button
@@ -234,6 +378,44 @@ export default function VoteSubmissionScreen({ operator, selectedBooth }) {
                 />
               </View>
             </View>
+            */}
+
+            {/* FEATURE: Add Record Video button and status indicator */}
+            {/* Media Attachment Action Buttons */}
+            <View style={{ flexDirection: "row", gap: 8, marginBottom: 16 }}>
+              {/* 1. Camera Button */}
+              <View style={{ flex: 1 }}>
+                <Button
+                  title={tallyImage ? "📷 Retake" : "📷 Photo"}
+                  variant="secondary"
+                  onPress={pickImage}
+                />
+              </View>
+
+              {/* 2. Video Button */}
+              <View style={{ flex: 1 }}>
+                <Button
+                  title={tallyVideo ? "🎥 Retake" : "🎥 Video"}
+                  variant="secondary"
+                  onPress={recordVideo}
+                />
+              </View>
+
+              {/* 3. Files Button */}
+              <View style={{ flex: 1 }}>
+                <Button
+                  title="📁 Files"
+                  variant="secondary"
+                  onPress={pickFromGallery}
+                />
+              </View>
+            </View>
+
+            {tallyVideo && (
+              <View style={styles.attachedContainer}>
+                <Text style={styles.attachedText}>✅ Video Attached</Text>
+              </View>
+            )}
 
             {tallyImage && (
               <Image
@@ -332,5 +514,20 @@ const styles = StyleSheet.create({
     borderRadius: RADIUS.lg,
     borderWidth: 1,
     borderColor: COLORS.border,
+  },
+  // FEATURE: Styles for the video attachment indicator
+  attachedContainer: {
+    backgroundColor: COLORS.successSoft,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: RADIUS.md,
+    marginBottom: 16,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  attachedText: {
+    color: COLORS.success,
+    fontWeight: "700",
+    fontSize: 14.5,
   },
 });

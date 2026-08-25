@@ -37,7 +37,7 @@ export default function Button({
       {loading ? (
         <ActivityIndicator size="small" color={v.text} />
       ) : (
-        <Text style={[styles.text, small && styles.textSmall, { color: v.text }]}>{title}</Text>
+        <Text numberOfLines={1} adjustsFontSizeToFit style={[styles.text, small && styles.textSmall, { color: v.text }]}>{title}</Text>
       )}
     </TouchableOpacity>
   );
@@ -45,10 +45,10 @@ export default function Button({
 
 const styles = StyleSheet.create({
   base: {
+    height: 48, // Forces all buttons to be exactly this tall
     borderWidth: 1,
     borderRadius: RADIUS.md,
-    paddingVertical: 13,
-    paddingHorizontal: SPACING.md,
+    paddingHorizontal: 8, // Reduced slightly so text fits better on small phones
     alignItems: 'center',
     justifyContent: 'center',
   },
