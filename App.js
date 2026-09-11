@@ -5,12 +5,14 @@ import LoginScreen from './src/screens/LoginScreen';
 import LocationSelectScreen from './src/screens/LocationSelectScreen';
 import VoteSubmissionScreen from './src/screens/VoteSubmissionScreen';
 import { COLORS } from './src/theme';
+import { setAuthToken } from './src/api/client';
 
 export default function App() {
   const [operator, setOperator] = useState(null);
   const [selectedBooth, setSelectedBooth] = useState(null);
 
   const handleLogout = () => {
+    setAuthToken(null);
     setOperator(null);
     setSelectedBooth(null);
   };

@@ -5,11 +5,21 @@ const API_BASE_URL = 'https://ems-backend-55q1.onrender.com/api';
 // FIX: Point mobile client to local backend API server on port 5000 for testing
 // const API_BASE_URL = 'http://localhost:5000/api';
 
+let authToken = null;
+
+export const setAuthToken = (token) => {
+  authToken = token;
+};
+
 export const apiCall = async (endpoint, method = 'GET', body = null, isFormData = false) => {
   try {
     const headers = {};
     if (!isFormData) {
       headers['Content-Type'] = 'application/json';
+    }
+
+    if (authToken) {
+      headers['Authorization'] = `Bearer ${authToken}`;
     }
 
     const config = { method, headers };
