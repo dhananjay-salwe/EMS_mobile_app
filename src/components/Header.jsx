@@ -1,30 +1,38 @@
 import React from 'react';
-import { StyleSheet, Text, View, TouchableOpacity } from 'react-native';
+import { StyleSheet, Text, View, TouchableOpacity, Image } from 'react-native';
 import { COLORS, RADIUS, SPACING, FONTS, SHADOW } from '../theme';
 
-export default function Header({ operator, selectedBooth, onLogout, onChangeBooth }) {
+export default function Header({ operator, selectedBooth, onLogout, onChangeBooth, onOpenProfile }) {
   const initial = operator?.full_name ? operator.full_name.charAt(0).toUpperCase() : '?';
+  const profilePic = operator?.profile_picture_url || operator?.profile_picture || operator?.avatar_url;
 
   return (
     <View style={styles.header}>
-      <View style={styles.userInfo}>
+      <TouchableOpacity
+        style={styles.userInfo}
+        onPress={onOpenProfile}
+        activeOpacity={0.7}
+      >
         <View style={styles.avatar}>
-          <Text style={styles.avatarText}>{initial}</Text>
+          {profilePic ? (
+            <Image source={{ uri: profilePic }} style={styles.avatarImage} />
+          ) : (
+            <Text style={styles.avatarText}>{initial}</Text>
+          )}
         </View>
         <View style={{ flex: 1 }}>
           <Text style={styles.userName} numberOfLines={1}>{operator.full_name}</Text>
           {selectedBooth ? (
             <View style={styles.boothBadge}>
               <Text style={styles.boothBadgeText} numberOfLines={1}>
-                {selectedBooth.booth_name} ·
-                {selectedBooth.unique_booth_code} 
+                {selectedBooth.booth_name} · {selectedBooth.unique_booth_code} 
               </Text>
             </View>
           ) : (
             <Text style={styles.noBooth}>No booth selected</Text>
           )}
         </View>
-      </View>
+      </TouchableOpacity>
 
       <View style={styles.actions}>
         {selectedBooth && onChangeBooth && (
@@ -61,6 +69,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 12,
+    overflow: 'hidden',
+  },
+  avatarImage: {
+    width: '100%',
+    height: '100%',
+    borderRadius: RADIUS.pill,
   },
   avatarText: {
     color: COLORS.primary,

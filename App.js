@@ -4,17 +4,20 @@ import Header from './src/components/Header';
 import LoginScreen from './src/screens/LoginScreen';
 import LocationSelectScreen from './src/screens/LocationSelectScreen';
 import VoteSubmissionScreen from './src/screens/VoteSubmissionScreen';
+import ProfileScreen from './src/screens/ProfileScreen';
 import { COLORS } from './src/theme';
 import { setAuthToken } from './src/api/client';
 
 export default function App() {
   const [operator, setOperator] = useState(null);
   const [selectedBooth, setSelectedBooth] = useState(null);
+  const [showProfile, setShowProfile] = useState(false);
 
   const handleLogout = () => {
     setAuthToken(null);
     setOperator(null);
     setSelectedBooth(null);
+    setShowProfile(false);
   };
 
   const handleLoginSuccess = (opData) => {
@@ -27,6 +30,10 @@ export default function App() {
         booth_name: opData.booth_name
       });
     }
+  };
+
+  const handleUpdateOperator = (updatedFields) => {
+    setOperator((prev) => ({ ...prev, ...updatedFields }));
   };
 
   // 1. Show Login Screen if unauthenticated
@@ -42,14 +49,25 @@ export default function App() {
         operator={operator}
         selectedBooth={selectedBooth}
         onLogout={handleLogout}
+        onOpenProfile={() => setShowProfile(true)}
         // Only allow changing booths if they are NOT strictly assigned to one
-        onChangeBooth={!operator.assigned_booth_id ? () => setSelectedBooth(null) : undefined}
+        onChangeBooth={!operator.assigned_booth_id ? () => {
+          setShowProfile(false);
+          setSelectedBooth(null);
+        } : undefined}
       />
-      {/* 3. If no booth is selected (and none assigned), show geographic selection */}
-      {!selectedBooth ? (
+      {/* 3. Conditional Screen Display */}
+      {showProfile ? (
+        <ProfileScreen
+          operator={operator}
+          selectedBooth={selectedBooth}
+          onUpdateOperator={handleUpdateOperator}
+          onBack={() => setShowProfile(false)}
+          onLogout={handleLogout}
+        />
+      ) : !selectedBooth ? (
         <LocationSelectScreen onBoothSelected={setSelectedBooth} />
       ) : (
-        /* 4. Once booth is selected or auto-assigned, show voting candidate form */
         <VoteSubmissionScreen operator={operator} selectedBooth={selectedBooth} />
       )}
     </SafeAreaView>

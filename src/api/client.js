@@ -48,3 +48,30 @@ export const apiCall = async (endpoint, method = 'GET', body = null, isFormData 
     return { success: false, message: `Network exception: ${error.message}` };
   }
 };
+
+/**
+ * Updates officer profile (full name and optional compressed profile picture).
+ * Uses multipart/form-data with exact field names 'full_name' and 'profile_picture'.
+ */
+export const updateProfile = async (fullName, imageUri = null) => {
+  const formData = new FormData();
+  formData.append('full_name', fullName.trim());
+
+  if (imageUri) {
+    formData.append('profile_picture', {
+      uri: imageUri,
+      name: `profile_${Date.now()}.jpg`,
+      type: 'image/jpeg',
+    });
+  }
+
+  return await apiCall('/auth/profile', 'PUT', formData, true);
+};
+
+/**
+ * Removes the officer profile picture.
+ * Dispatches a DELETE request with Bearer authentication.
+ */
+export const removeProfilePicture = async () => {
+  return await apiCall('/auth/profile/picture', 'DELETE');
+};
