@@ -65,7 +65,7 @@ export const updateProfile = async (fullName, imageUri = null) => {
     });
   }
 
-  return await apiCall('/auth/profile', 'PUT', formData, true);
+  return await apiCall('/operators/profile', 'PUT', formData, true);
 };
 
 /**
@@ -73,5 +73,5 @@ export const updateProfile = async (fullName, imageUri = null) => {
  * Dispatches a DELETE request with Bearer authentication.
  */
 export const removeProfilePicture = async () => {
-  return await apiCall('/auth/profile/picture', 'DELETE');
+  return await apiCall('/operators/profile/picture', 'DELETE');
 };

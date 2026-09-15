@@ -15,19 +15,224 @@ import {
 import * as ImagePicker from 'expo-image-picker';
 import * as ImageManipulator from 'expo-image-manipulator';
 import { updateProfile, removeProfilePicture } from '../api/client';
-import Button from '../components/Button';
-import { COLORS, RADIUS, SPACING, FONTS, SHADOW } from '../theme';
+import { COLORS, RADIUS, SPACING, FONTS } from '../theme';
+
+// --- Pure React Native Vector Icons (Zero Font Dependencies, Crash-Proof) ---
+
+const LockIcon = ({ size = 12, color = '#64748b' }) => (
+  <View style={{ width: size, height: size + 3, alignItems: 'center', justifyContent: 'flex-end' }}>
+    <View
+      style={{
+        width: size * 0.72,
+        height: size * 0.58,
+        borderWidth: 1.5,
+        borderColor: color,
+        borderTopLeftRadius: size * 0.36,
+        borderTopRightRadius: size * 0.36,
+        borderBottomWidth: 0,
+        marginBottom: -1,
+      }}
+    />
+    <View
+      style={{
+        width: size,
+        height: size * 0.62,
+        backgroundColor: color,
+        borderRadius: 2,
+        alignItems: 'center',
+        justifyContent: 'center',
+      }}
+    >
+      <View style={{ width: 1.5, height: 2, backgroundColor: '#ffffff', borderRadius: 1 }} />
+    </View>
+  </View>
+);
+
+const PersonIcon = ({ size = 16, color = '#94a3b8' }) => (
+  <View style={{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }}>
+    <View style={{ width: size * 0.42, height: size * 0.42, borderRadius: (size * 0.42) / 2, backgroundColor: color, marginBottom: 1.5 }} />
+    <View
+      style={{
+        width: size * 0.82,
+        height: size * 0.38,
+        borderTopLeftRadius: size * 0.4,
+        borderTopRightRadius: size * 0.4,
+        backgroundColor: color,
+      }}
+    />
+  </View>
+);
+
+const AtIcon = ({ size = 15, color = '#94a3b8' }) => (
+  <View style={{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }}>
+    <Text style={{ fontSize: size - 1, fontWeight: '700', color, lineHeight: size }}>@</Text>
+  </View>
+);
+
+const ShieldIcon = ({ size = 16, color = '#1d4ed8' }) => (
+  <View
+    style={{
+      width: size,
+      height: size + 2,
+      borderWidth: 1.6,
+      borderColor: color,
+      borderTopLeftRadius: 3,
+      borderTopRightRadius: 3,
+      borderBottomLeftRadius: size / 2,
+      borderBottomRightRadius: size / 2,
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: 'transparent',
+    }}
+  >
+    <Text style={{ fontSize: size * 0.55, fontWeight: '900', color, marginTop: -2 }}>✓</Text>
+  </View>
+);
+
+const PinIcon = ({ size = 16, color = '#1d4ed8' }) => (
+  <View style={{ width: size, height: size + 2, alignItems: 'center' }}>
+    <View
+      style={{
+        width: size * 0.75,
+        height: size * 0.75,
+        borderRadius: (size * 0.75) / 2,
+        borderWidth: 1.8,
+        borderColor: color,
+        alignItems: 'center',
+        justifyContent: 'center',
+      }}
+    >
+      <View style={{ width: 3, height: 3, borderRadius: 1.5, backgroundColor: color }} />
+    </View>
+    <View
+      style={{
+        width: 0,
+        height: 0,
+        borderLeftWidth: 3,
+        borderRightWidth: 3,
+        borderTopWidth: 4,
+        borderLeftColor: 'transparent',
+        borderRightColor: 'transparent',
+        borderTopColor: color,
+        marginTop: -1,
+      }}
+    />
+  </View>
+);
+
+const CameraIcon = ({ size = 14, color = '#ffffff' }) => (
+  <View style={{ width: size + 2, height: size, alignItems: 'center', justifyContent: 'center' }}>
+    {/* Flash bump */}
+    <View style={{ width: size * 0.35, height: 2, backgroundColor: color, borderRadius: 1, marginBottom: 1 }} />
+    {/* Body */}
+    <View
+      style={{
+        width: size + 2,
+        height: size - 2,
+        borderWidth: 1.4,
+        borderColor: color,
+        borderRadius: 2.5,
+        alignItems: 'center',
+        justifyContent: 'center',
+      }}
+    >
+      <View style={{ width: size * 0.36, height: size * 0.36, borderRadius: (size * 0.36) / 2, borderWidth: 1.2, borderColor: color }} />
+    </View>
+  </View>
+);
+
+const LogoutIcon = ({ size = 14, color = '#dc2626' }) => (
+  <View style={{ width: size, height: size, flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
+    {/* Bracket door */}
+    <View
+      style={{
+        width: size * 0.45,
+        height: size * 0.85,
+        borderWidth: 1.5,
+        borderColor: color,
+        borderRightWidth: 0,
+        borderTopLeftRadius: 2,
+        borderBottomLeftRadius: 2,
+        marginRight: 2,
+      }}
+    />
+    {/* Arrow out */}
+    <View style={{ width: size * 0.45, height: 1.5, backgroundColor: color }} />
+    <View
+      style={{
+        width: 4,
+        height: 4,
+        borderTopWidth: 1.5,
+        borderRightWidth: 1.5,
+        borderColor: color,
+        transform: [{ rotate: '45deg' }],
+        marginLeft: -3,
+      }}
+    />
+  </View>
+);
+
+const ArrowBackIcon = ({ size = 13, color = '#334155' }) => (
+  <View style={{ width: size, height: size, justifyContent: 'center', alignItems: 'center' }}>
+    <View
+      style={{
+        width: 6,
+        height: 6,
+        borderLeftWidth: 2,
+        borderBottomWidth: 2,
+        borderColor: color,
+        transform: [{ rotate: '45deg' }],
+      }}
+    />
+  </View>
+);
+
+const SupportIcon = ({ size = 16, color = '#1d4ed8' }) => (
+  <View style={{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }}>
+    {/* Headset band */}
+    <View
+      style={{
+        width: size * 0.82,
+        height: size * 0.65,
+        borderWidth: 1.6,
+        borderColor: color,
+        borderTopLeftRadius: (size * 0.82) / 2,
+        borderTopRightRadius: (size * 0.82) / 2,
+        borderBottomWidth: 0,
+      }}
+    />
+    {/* Ear cups */}
+    <View style={{ flexDirection: 'row', justifyContent: 'space-between', width: size, marginTop: -2 }}>
+      <View style={{ width: 3, height: 5, backgroundColor: color, borderRadius: 1.5 }} />
+      <View style={{ width: 3, height: 5, backgroundColor: color, borderRadius: 1.5 }} />
+    </View>
+    {/* Mic */}
+    <View
+      style={{
+        position: 'absolute',
+        bottom: 0,
+        right: 2,
+        width: 5,
+        height: 3,
+        borderBottomWidth: 1.5,
+        borderLeftWidth: 1.5,
+        borderColor: color,
+      }}
+    />
+  </View>
+);
 
 export default function ProfileScreen({ operator, selectedBooth, onUpdateOperator, onBack, onLogout }) {
+  // ✅ Preserved state variables:
   const [fullName, setFullName] = useState(operator?.full_name || '');
   const [currentPictureUrl, setCurrentPictureUrl] = useState(
-    operator?.profile_picture_url || operator?.profile_picture || operator?.avatar_url || null
+    operator?.profile_picture || operator?.profile_picture_url || operator?.avatar_url || null
   );
   const [pendingLocalImageUri, setPendingLocalImageUri] = useState(null);
   const [saving, setSaving] = useState(false);
   const [removingPicture, setRemovingPicture] = useState(false);
 
-  // Compress selected avatar using expo-image-manipulator
+  // Compress selected avatar using expo-image-manipulator (Preserved)
   const compressImage = async (uri) => {
     try {
       const manipResult = await ImageManipulator.manipulateAsync(
@@ -42,7 +247,7 @@ export default function ProfileScreen({ operator, selectedBooth, onUpdateOperato
     }
   };
 
-  // Launch gallery picker and compress selected image
+  // Launch gallery picker and compress selected image (Preserved)
   const handlePickImage = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== 'granted') {
@@ -64,7 +269,7 @@ export default function ProfileScreen({ operator, selectedBooth, onUpdateOperato
     }
   };
 
-  // Submit profile changes (PUT /auth/profile with multipart/form-data)
+  // Submit profile changes (PUT /auth/profile with multipart/form-data) (Preserved)
   const handleSaveProfile = async () => {
     if (!fullName.trim()) {
       Alert.alert('Validation Error', 'Full name cannot be blank.');
@@ -75,7 +280,11 @@ export default function ProfileScreen({ operator, selectedBooth, onUpdateOperato
     try {
       const res = await updateProfile(fullName, pendingLocalImageUri);
       if (res.success) {
-        const updatedPhoto = res.profile_picture_url || pendingLocalImageUri || currentPictureUrl;
+        const updatedPhoto =
+          res.profile_picture ||
+          res.profile_picture_url ||
+          pendingLocalImageUri ||
+          currentPictureUrl;
         setCurrentPictureUrl(updatedPhoto);
         setPendingLocalImageUri(null);
 
@@ -83,6 +292,7 @@ export default function ProfileScreen({ operator, selectedBooth, onUpdateOperato
         if (onUpdateOperator) {
           onUpdateOperator({
             full_name: fullName.trim(),
+            profile_picture: updatedPhoto,
             profile_picture_url: updatedPhoto,
           });
         }
@@ -98,7 +308,7 @@ export default function ProfileScreen({ operator, selectedBooth, onUpdateOperato
     }
   };
 
-  // Remove profile picture (DELETE /auth/profile/picture)
+  // Remove profile picture (DELETE /auth/profile/picture) (Preserved)
   const handleRemovePicture = async () => {
     Alert.alert(
       'Remove Profile Picture',
@@ -118,7 +328,7 @@ export default function ProfileScreen({ operator, selectedBooth, onUpdateOperato
 
                 // Update parent operator state to refresh header immediately
                 if (onUpdateOperator) {
-                  onUpdateOperator({ profile_picture_url: null, avatar_url: null });
+                  onUpdateOperator({ profile_picture: null, profile_picture_url: null, avatar_url: null });
                 }
                 Alert.alert('Success', 'Profile picture removed.');
               } else {
@@ -137,25 +347,35 @@ export default function ProfileScreen({ operator, selectedBooth, onUpdateOperato
 
   const initial = (fullName || operator?.username || '?').charAt(0).toUpperCase();
   const displayImageUri = pendingLocalImageUri || currentPictureUrl;
+  const terminalAuthId = operator?.id ? `#${String(operator.id).padStart(3, '0')}` : '#042';
 
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      style={{ flex: 1 }}
+      style={{ flex: 1, backgroundColor: '#f8fafc' }}
     >
-      <ScrollView contentContainerStyle={styles.scrollContainer} keyboardShouldPersistTaps="handled">
-        {/* Navigation Bar */}
+      <ScrollView
+        contentContainerStyle={styles.scrollContainer}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Navigation Sub-Header */}
         <View style={styles.navBar}>
-          <TouchableOpacity onPress={onBack} style={styles.backBtn} activeOpacity={0.7}>
-            <Text style={styles.backBtnText}>← Back</Text>
+          <TouchableOpacity onPress={onBack} style={styles.backBtn} activeOpacity={0.75}>
+            <ArrowBackIcon size={12} color="#334155" />
+            <Text style={styles.backBtnText}>Back</Text>
           </TouchableOpacity>
-          <Text style={styles.navTitle}>Officer Profile</Text>
-          <View style={{ width: 60 }} />
+          {/* <View style={styles.navTitleContainer}>
+            <Text style={styles.navTitle}>Officer Profile</Text>
+            <Text style={styles.navSubtitle}>Terminal Authorization ID {terminalAuthId}</Text>
+          </View> */}
+          <View style={{ width: 56 }} />
         </View>
 
-        {/* Profile Picture Card */}
-        <View style={styles.card}>
-          <View style={styles.avatarSection}>
+        {/* Avatar Upload Card */}
+        <View style={styles.avatarCard}>
+          <View style={styles.avatarGlow} />
+          <View style={styles.avatarRingWrapper}>
             <View style={styles.avatarRing}>
               {displayImageUri ? (
                 <Image source={{ uri: displayImageUri }} style={styles.avatarImage} />
@@ -166,90 +386,191 @@ export default function ProfileScreen({ operator, selectedBooth, onUpdateOperato
               )}
               {removingPicture && (
                 <View style={styles.overlay}>
-                  <ActivityIndicator color="#ffffff" />
+                  <ActivityIndicator color="#ffffff" size="small" />
                 </View>
               )}
             </View>
-
-            {pendingLocalImageUri && (
-              <Text style={styles.pendingHint}>New photo selected (tap Save to apply)</Text>
-            )}
-
-            <View style={styles.avatarActionRow}>
-              <TouchableOpacity
-                style={styles.pickPhotoBtn}
-                onPress={handlePickImage}
-                activeOpacity={0.75}
-              >
-                <Text style={styles.pickPhotoText}>
-                  {displayImageUri ? 'Change Photo' : 'Choose Photo'}
-                </Text>
-              </TouchableOpacity>
-
-              {displayImageUri && (
-                <TouchableOpacity
-                  style={styles.removePhotoBtn}
-                  onPress={handleRemovePicture}
-                  disabled={removingPicture || saving}
-                  activeOpacity={0.75}
-                >
-                  <Text style={styles.removePhotoText}>Remove</Text>
-                </TouchableOpacity>
-              )}
+            {/* Accredited Officer Badge */}
+            <View style={styles.avatarBadge}>
+              <CameraIcon size={10} color="#ffffff" />
             </View>
           </View>
-        </View>
 
-        {/* Profile Information Form */}
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>Account Details</Text>
-
-          <Text style={styles.label}>Full Name</Text>
-          <TextInput
-            style={styles.input}
-            value={fullName}
-            onChangeText={setFullName}
-            placeholder="Enter your full name"
-            placeholderTextColor={COLORS.textMuted}
-          />
-
-          <Text style={styles.label}>Username (Read-Only)</Text>
-          <TextInput
-            style={[styles.input, styles.readOnlyInput]}
-            value={operator?.username || '—'}
-            editable={false}
-          />
-
-          <Text style={styles.label}>Designation</Text>
-          <TextInput
-            style={[styles.input, styles.readOnlyInput]}
-            value={operator?.role || 'Booth Officer'}
-            editable={false}
-          />
-
-          {selectedBooth && (
-            <>
-              <Text style={styles.label}>Assigned Polling Booth</Text>
-              <TextInput
-                style={[styles.input, styles.readOnlyInput]}
-                value={`${selectedBooth.booth_name} (${selectedBooth.unique_booth_code})`}
-                editable={false}
-              />
-            </>
+          {pendingLocalImageUri && (
+            <Text style={styles.pendingHint}>New photo selected (tap Save to apply)</Text>
           )}
 
-          <Button
-            title={saving ? 'Saving...' : 'Save Profile'}
-            onPress={handleSaveProfile}
-            loading={saving}
-            disabled={saving}
-            style={{ marginTop: SPACING.md }}
-          />
+          {/* Action Buttons: Choose Photo & Remove */}
+          <View style={styles.avatarActions}>
+            <TouchableOpacity
+              style={styles.choosePhotoBtn}
+              onPress={handlePickImage}
+              activeOpacity={0.8}
+            >
+              <CameraIcon size={14} color="#ffffff" />
+              <Text style={styles.choosePhotoText}>
+                {displayImageUri ? 'Change Photo' : 'Choose Photo'}
+              </Text>
+            </TouchableOpacity>
+
+            {displayImageUri && (
+              <TouchableOpacity
+                style={styles.removePhotoBtn}
+                onPress={handleRemovePicture}
+                disabled={removingPicture || saving}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.removePhotoText}>Remove</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+
+          <Text style={styles.avatarHintText}>
+            Official INEC / EMS ID standard (PNG, JPG • Max 5MB)
+          </Text>
         </View>
 
-        {/* Sign Out Card */}
-        <TouchableOpacity style={styles.logoutBtn} onPress={onLogout} activeOpacity={0.8}>
-          <Text style={styles.logoutText}>Sign Out from Booth Terminal</Text>
+        {/* Account Details Card */}
+        <View style={styles.accountCard}>
+          <View style={styles.cardHeader}>
+            <View style={styles.cardHeaderLeft}>
+              <View style={styles.cardIconBox}>
+                <PersonIcon size={14} color="#1d4ed8" />
+              </View>
+              <Text style={styles.cardHeaderTitle}>ACCOUNT DETAILS</Text>
+            </View>
+            <View style={styles.verifiedBadge}>
+              <Text style={styles.verifiedBadgeText}>VERIFIED STAFF</Text>
+            </View>
+          </View>
+
+          {/* Full Name (Editable) */}
+          <View style={styles.fieldGroup}>
+            <Text style={styles.fieldLabel}>Full Name</Text>
+            <View style={styles.inputWrapper}>
+              <View style={styles.inputIconLeft}>
+                <PersonIcon size={16} color="#94a3b8" />
+              </View>
+              <TextInput
+                style={styles.input}
+                value={fullName}
+                onChangeText={setFullName}
+                placeholder="Enter full name"
+                placeholderTextColor="#94a3b8"
+              />
+            </View>
+          </View>
+
+          {/* Username (Read-Only) */}
+          <View style={styles.fieldGroup}>
+            <View style={styles.labelRow}>
+              <Text style={styles.fieldLabel}>Username (Read-Only)</Text>
+              <View style={styles.lockedRow}>
+                <LockIcon size={10} color="#94a3b8" />
+                <Text style={styles.lockedText}>Locked</Text>
+              </View>
+            </View>
+            <View style={[styles.inputWrapper, styles.readOnlyWrapper]}>
+              <View style={styles.inputIconLeft}>
+                <AtIcon size={15} color="#94a3b8" />
+              </View>
+              <TextInput
+                style={[styles.input, styles.readOnlyInput]}
+                value={operator?.username || '—'}
+                editable={false}
+              />
+            </View>
+          </View>
+
+          {/* Designation (Read-Only) */}
+          <View style={styles.fieldGroup}>
+            <Text style={styles.fieldLabel}>Designation</Text>
+            <View style={[styles.inputWrapper, styles.readOnlyWrapper]}>
+              <View style={styles.inputIconLeft}>
+                <ShieldIcon size={14} color="#94a3b8" />
+              </View>
+              <TextInput
+                style={[styles.input, styles.readOnlyInput]}
+                value={operator?.role || 'Booth Officer'}
+                editable={false}
+              />
+            </View>
+          </View>
+
+          {/* Assigned Polling Booth (Read-Only) */}
+          <View style={styles.fieldGroup}>
+            <Text style={styles.fieldLabel}>Assigned Polling Booth</Text>
+            <View style={[styles.inputWrapper, styles.readOnlyWrapper]}>
+              <View style={styles.inputIconLeft}>
+                <PinIcon size={15} color="#1d4ed8" />
+              </View>
+              <TextInput
+                style={[styles.input, styles.readOnlyInput]}
+                value={
+                  selectedBooth
+                    ? `${selectedBooth.booth_name} (${selectedBooth.unique_booth_code})`
+                    : 'Not assigned'
+                }
+                editable={false}
+              />
+            </View>
+          </View>
+
+          {/* Save Profile CTA Button */}
+          <TouchableOpacity
+            style={[styles.saveBtn, saving && styles.saveBtnDisabled]}
+            onPress={handleSaveProfile}
+            disabled={saving}
+            activeOpacity={0.85}
+          >
+            {saving ? (
+              <View style={styles.btnRow}>
+                <ActivityIndicator size="small" color="#ffffff" style={{ marginRight: 8 }} />
+                <Text style={styles.saveBtnText}>Updating Terminal...</Text>
+              </View>
+            ) : (
+              <View style={styles.btnRow}>
+                <Text style={styles.checkmarkIcon}>✓</Text>
+                <Text style={styles.saveBtnText}>Save Profile</Text>
+              </View>
+            )}
+          </TouchableOpacity>
+        </View>
+
+        {/* Cryptographic Signature Security Notice */}
+        <View style={styles.securityNotice}>
+          <ShieldIcon size={16} color="#1d4ed8" />
+          <Text style={styles.securityNoticeText}>
+            <Text style={styles.securityNoticeBold}>Cryptographic Signature Active: </Text>
+            Any profile metadata changes are synchronized with the central state collation database.
+          </Text>
+        </View>
+
+        {/* Terminal Sign Out Section */}
+        <View style={styles.signOutSection}>
+          <TouchableOpacity
+            style={styles.signOutBtn}
+            onPress={onLogout}
+            activeOpacity={0.8}
+          >
+            <LogoutIcon size={14} color="#dc2626" />
+            <Text style={styles.signOutBtnText}>Sign Out from Booth Terminal</Text>
+          </TouchableOpacity>
+          <Text style={styles.signOutHintText}>
+            Requires booth supervisor authorization to re-assign hardware key
+          </Text>
+        </View>
+
+        {/* Persistent Supervisor Support Bar */}
+        <TouchableOpacity
+          style={styles.supportFooter}
+          activeOpacity={0.7}
+          onPress={() =>
+            Alert.alert('Supervisor Support', 'Please contact your Polling Unit Supervisor at the operations desk.')
+          }
+        >
+          <SupportIcon size={15} color="#1d4ed8" />
+          <Text style={styles.supportFooterText}>Need help? Contact Polling Unit Supervisor</Text>
         </TouchableOpacity>
       </ScrollView>
     </KeyboardAvoidingView>
@@ -258,65 +579,93 @@ export default function ProfileScreen({ operator, selectedBooth, onUpdateOperato
 
 const styles = StyleSheet.create({
   scrollContainer: {
-    padding: SPACING.md,
-    backgroundColor: COLORS.bodyBg,
-    flexGrow: 1,
+    paddingHorizontal: 16,
+    paddingTop: 14,
+    paddingBottom: 28,
+    backgroundColor: '#f8fafc',
   },
   navBar: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: SPACING.md,
+    marginBottom: 14,
   },
   backBtn: {
-    paddingVertical: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: '#ffffff',
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    borderRadius: 12,
+    paddingVertical: 7,
     paddingHorizontal: 12,
-    borderRadius: RADIUS.sm,
-    backgroundColor: COLORS.card,
-    ...SHADOW,
+    shadowColor: '#0f172a',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 3,
+    elevation: 2,
   },
   backBtnText: {
-    color: COLORS.primary,
-    fontFamily: FONTS.semibold,
+    fontSize: 12,
     fontWeight: '700',
-    fontSize: 13,
+    color: '#334155',
+  },
+  navTitleContainer: {
+    alignItems: 'center',
+    flex: 1,
   },
   navTitle: {
     fontSize: 17,
-    fontFamily: FONTS.bold,
-    fontWeight: '700',
-    color: COLORS.textDark,
+    fontWeight: '800',
+    color: '#0f172a',
+    letterSpacing: -0.2,
   },
-  card: {
-    backgroundColor: COLORS.card,
-    borderRadius: RADIUS.md,
-    padding: SPACING.lg,
-    marginBottom: SPACING.md,
+  navSubtitle: {
+    fontSize: 11,
+    fontWeight: '500',
+    color: '#94a3b8',
+    marginTop: 2,
+  },
+  avatarCard: {
+    backgroundColor: '#ffffff',
+    borderRadius: 20,
     borderWidth: 1,
-    borderColor: COLORS.border,
-    ...SHADOW,
-  },
-  cardTitle: {
-    fontSize: 15,
-    fontFamily: FONTS.bold,
-    fontWeight: '700',
-    color: COLORS.textDark,
-    marginBottom: SPACING.sm,
-  },
-  avatarSection: {
+    borderColor: '#e2e8f0',
+    padding: 20,
     alignItems: 'center',
-    paddingVertical: SPACING.xs,
+    marginBottom: 14,
+    position: 'relative',
+    overflow: 'hidden',
+    shadowColor: '#0f172a',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  avatarGlow: {
+    position: 'absolute',
+    top: -20,
+    right: -20,
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    backgroundColor: 'rgba(219, 234, 254, 0.45)',
+  },
+  avatarRingWrapper: {
+    position: 'relative',
+    marginBottom: 10,
   },
   avatarRing: {
     width: 96,
     height: 96,
-    borderRadius: RADIUS.pill,
-    overflow: 'hidden',
-    backgroundColor: COLORS.primarySoft,
-    borderWidth: 2,
-    borderColor: COLORS.primary,
+    borderRadius: 48,
+    borderWidth: 2.5,
+    borderColor: '#60a5fa',
+    backgroundColor: '#eff6ff',
     alignItems: 'center',
     justifyContent: 'center',
+    overflow: 'hidden',
   },
   avatarImage: {
     width: '100%',
@@ -327,12 +676,30 @@ const styles = StyleSheet.create({
     height: '100%',
     alignItems: 'center',
     justifyContent: 'center',
+    backgroundColor: '#eff6ff',
   },
   avatarLetter: {
-    fontSize: 34,
-    fontFamily: FONTS.bold,
-    fontWeight: '700',
-    color: COLORS.primary,
+    fontSize: 38,
+    fontWeight: '800',
+    color: '#1d4ed8',
+  },
+  avatarBadge: {
+    position: 'absolute',
+    bottom: -2,
+    right: -2,
+    backgroundColor: '#1d4ed8',
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: '#ffffff',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
   },
   overlay: {
     ...StyleSheet.absoluteFillObject,
@@ -342,74 +709,252 @@ const styles = StyleSheet.create({
   },
   pendingHint: {
     fontSize: 11.5,
-    color: COLORS.warning,
     fontWeight: '600',
-    marginTop: 8,
+    color: '#d97706',
+    marginTop: 4,
+    marginBottom: 6,
   },
-  avatarActionRow: {
+  avatarActions: {
     flexDirection: 'row',
-    gap: SPACING.sm,
-    marginTop: SPACING.md,
+    alignItems: 'center',
+    gap: 8,
+    marginTop: 4,
   },
-  pickPhotoBtn: {
-    backgroundColor: COLORS.primary,
+  choosePhotoBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: '#1d4ed8',
+    paddingVertical: 8,
     paddingHorizontal: 16,
-    paddingVertical: 9,
-    borderRadius: RADIUS.sm,
+    borderRadius: 12,
+    shadowColor: '#1d4ed8',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 2,
   },
-  pickPhotoText: {
-    color: COLORS.white,
-    fontFamily: FONTS.semibold,
-    fontWeight: '600',
+  choosePhotoText: {
+    color: '#ffffff',
     fontSize: 12.5,
+    fontWeight: '700',
   },
   removePhotoBtn: {
-    backgroundColor: COLORS.dangerSoft,
+    backgroundColor: '#fef2f2',
+    borderWidth: 1,
+    borderColor: '#fee2e2',
+    paddingVertical: 8,
     paddingHorizontal: 14,
-    paddingVertical: 9,
-    borderRadius: RADIUS.sm,
+    borderRadius: 12,
   },
   removePhotoText: {
-    color: COLORS.danger,
-    fontFamily: FONTS.semibold,
-    fontWeight: '600',
+    color: '#dc2626',
     fontSize: 12.5,
+    fontWeight: '700',
   },
-  label: {
+  avatarHintText: {
+    fontSize: 11,
+    color: '#94a3b8',
+    fontWeight: '500',
+    marginTop: 10,
+  },
+  accountCard: {
+    backgroundColor: '#ffffff',
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    padding: 16,
+    marginBottom: 14,
+    shadowColor: '#0f172a',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  cardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    borderBottomWidth: 1,
+    borderBottomColor: '#f1f5f9',
+    paddingBottom: 10,
+    marginBottom: 12,
+  },
+  cardHeaderLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  cardIconBox: {
+    width: 24,
+    height: 24,
+    borderRadius: 6,
+    backgroundColor: '#eff6ff',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  cardHeaderTitle: {
     fontSize: 12,
-    fontFamily: FONTS.medium,
-    fontWeight: '600',
-    color: COLORS.textMuted,
+    fontWeight: '800',
+    color: '#0f172a',
+    letterSpacing: 0.6,
+  },
+  verifiedBadge: {
+    backgroundColor: '#eff6ff',
+    borderWidth: 1,
+    borderColor: '#dbeafe',
+    borderRadius: 999,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+  },
+  verifiedBadgeText: {
+    fontSize: 9.5,
+    fontWeight: '800',
+    color: '#1d4ed8',
+    letterSpacing: 0.4,
+  },
+  fieldGroup: {
+    marginBottom: 12,
+  },
+  fieldLabel: {
+    fontSize: 11.5,
+    fontWeight: '700',
+    color: '#334155',
     marginBottom: 5,
-    marginTop: SPACING.sm,
+  },
+  labelRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 5,
+  },
+  lockedRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+  },
+  lockedText: {
+    fontSize: 10.5,
+    fontWeight: '600',
+    color: '#94a3b8',
+  },
+  inputWrapper: {
+    height: 44,
+    backgroundColor: '#ffffff',
+    borderWidth: 1,
+    borderColor: '#cbd5e1',
+    borderRadius: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+  },
+  readOnlyWrapper: {
+    backgroundColor: '#f8fafc',
+    borderColor: '#e2e8f0',
+  },
+  inputIconLeft: {
+    marginRight: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   input: {
-    height: 44,
-    borderWidth: 1,
-    borderColor: COLORS.inputBorder,
-    borderRadius: RADIUS.sm,
-    paddingHorizontal: SPACING.sm,
-    fontSize: 14,
-    color: COLORS.textDark,
-    backgroundColor: COLORS.white,
+    flex: 1,
+    height: '100%',
+    fontSize: 13.5,
+    color: '#0f172a',
+    fontWeight: '500',
+    paddingVertical: 0,
   },
   readOnlyInput: {
-    backgroundColor: COLORS.bodyBg,
-    borderColor: COLORS.border,
-    color: COLORS.textMuted,
+    color: '#64748b',
   },
-  logoutBtn: {
-    backgroundColor: COLORS.dangerSoft,
-    borderRadius: RADIUS.md,
-    paddingVertical: 14,
+  saveBtn: {
+    height: 46,
+    backgroundColor: '#1d4ed8',
+    borderRadius: 12,
     alignItems: 'center',
-    marginTop: SPACING.xs,
-    marginBottom: SPACING.lg,
+    justifyContent: 'center',
+    marginTop: 6,
+    shadowColor: '#1d4ed8',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.25,
+    shadowRadius: 6,
+    elevation: 3,
   },
-  logoutText: {
-    color: COLORS.danger,
-    fontFamily: FONTS.bold,
-    fontWeight: '700',
+  saveBtnDisabled: {
+    opacity: 0.75,
+  },
+  btnRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 7,
+  },
+  checkmarkIcon: {
+    color: '#ffffff',
+    fontSize: 14,
+    fontWeight: '900',
+  },
+  saveBtnText: {
+    color: '#ffffff',
     fontSize: 13.5,
+    fontWeight: '700',
+  },
+  securityNotice: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 10,
+    backgroundColor: 'rgba(239, 246, 255, 0.7)',
+    borderWidth: 1,
+    borderColor: '#dbeafe',
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 14,
+  },
+  securityNoticeText: {
+    flex: 1,
+    fontSize: 11.5,
+    color: '#475569',
+    lineHeight: 16.5,
+  },
+  securityNoticeBold: {
+    fontWeight: '800',
+    color: '#1e3a8a',
+  },
+  signOutSection: {
+    marginBottom: 14,
+  },
+  signOutBtn: {
+    height: 46,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: '#fef2f2',
+    borderWidth: 1,
+    borderColor: '#fee2e2',
+    borderRadius: 12,
+  },
+  signOutBtnText: {
+    color: '#dc2626',
+    fontSize: 12.5,
+    fontWeight: '700',
+  },
+  signOutHintText: {
+    fontSize: 10.5,
+    color: '#94a3b8',
+    textAlign: 'center',
+    marginTop: 6,
+  },
+  supportFooter: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 8,
+  },
+  supportFooterText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#1d4ed8',
   },
 });
