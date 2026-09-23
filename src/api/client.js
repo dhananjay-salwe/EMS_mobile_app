@@ -1,6 +1,8 @@
 // OLD CODE:
 // // const API_BASE_URL = 'http://192.168.1.7:8080/api';
-const API_BASE_URL = 'https://ems-backend-55q1.onrender.com/api';
+// const API_BASE_URL = 'https://ems-backend-55q1.onrender.com/api';
+
+const API_BASE_URL = 'https://ems-api.spikedace.com/api';
 
 // FIX: Point mobile client to local backend API server on port 5000 for testing
 // const API_BASE_URL = 'http://localhost:5000/api';
@@ -65,7 +67,7 @@ export const updateProfile = async (fullName, imageUri = null) => {
     });
   }
 
-  return await apiCall('/auth/profile', 'PUT', formData, true);
+  return await apiCall('/operators/profile', 'PUT', formData, true);
 };
 
 /**
@@ -73,5 +75,5 @@ export const updateProfile = async (fullName, imageUri = null) => {
  * Dispatches a DELETE request with Bearer authentication.
  */
 export const removeProfilePicture = async () => {
-  return await apiCall('/auth/profile/picture', 'DELETE');
+  return await apiCall('/operators/profile/picture', 'DELETE');
 };

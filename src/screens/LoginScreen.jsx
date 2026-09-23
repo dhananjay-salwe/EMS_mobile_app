@@ -214,7 +214,21 @@ export default function LoginScreen({ onLoginSuccess }) {
       if (data.token) {
         setAuthToken(data.token);
       }
-      onLoginSuccess(data.operator);
+      // Extract profile_picture from operator object or root response payload
+      const profilePicture =
+        data.operator?.profile_picture ||
+        data.profile_picture ||
+        data.operator?.profile_picture_url ||
+        data.profile_picture_url ||
+        null;
+
+      const operatorData = {
+        ...(data.operator || {}),
+        profile_picture: profilePicture,
+        profile_picture_url: profilePicture,
+      };
+
+      onLoginSuccess(operatorData);
     } else {
       Alert.alert('Login Failed', data.message || 'Invalid credentials');
     }
@@ -223,7 +237,7 @@ export default function LoginScreen({ onLoginSuccess }) {
   return (
     <SafeAreaView style={styles.container}>
       {/* Top Security Status Bar */}
-      <View style={styles.topBar}>
+      {/* <View style={styles.topBar}>
         <View style={styles.topBarInner}>
           <View style={styles.statusLeft}>
             <View style={styles.statusDot} />
@@ -234,7 +248,7 @@ export default function LoginScreen({ onLoginSuccess }) {
             <Text style={styles.sslText}>256-Bit SSL</Text>
           </View>
         </View>
-      </View>
+      </View> */}
 
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -274,7 +288,7 @@ export default function LoginScreen({ onLoginSuccess }) {
             {/* Form Content */}
             <View style={styles.form}>
               {/* Presiding Officer Notice */}
-              <View style={styles.noticeBox}>
+              {/* <View style={styles.noticeBox}>
                 <View style={styles.noticeIconWrapper}>
                   <ShieldCheckIcon />
                 </View>
@@ -284,7 +298,7 @@ export default function LoginScreen({ onLoginSuccess }) {
                     Enter your assigned polling staff credentials to initialize ballot counting.
                   </Text>
                 </View>
-              </View>
+              </View> */}
 
               {/* Username Field */}
               <View style={styles.inputGroup}>
@@ -330,7 +344,7 @@ export default function LoginScreen({ onLoginSuccess }) {
                       )
                     }
                   >
-                    <Text style={styles.resetKeyText}>Reset Key</Text>
+                    <Text style={styles.resetKeyText}>Reset</Text>
                   </TouchableOpacity>
                 </View>
                 <View style={styles.inputWrapper}>
@@ -379,9 +393,9 @@ export default function LoginScreen({ onLoginSuccess }) {
               </TouchableOpacity>
 
               {/* Local Encryption Notice */}
-              <Text style={styles.encryptionNotice}>
+              {/* <Text style={styles.encryptionNotice}>
                 Operating under strict local encryption. Tally buffers sync automatically when connection restores.
-              </Text>
+              </Text> */}
             </View>
           </View>
 
