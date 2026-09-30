@@ -15,56 +15,68 @@ import {
 import * as ImagePicker from 'expo-image-picker';
 import * as ImageManipulator from 'expo-image-manipulator';
 import { Video as VideoCompressor } from 'react-native-compressor';
+import { Video, ResizeMode } from 'expo-av';
 import { apiCall } from '../api/client';
 import { COLORS, RADIUS, SPACING, FONTS } from '../theme';
 
 // --- Pure React Native Vector Icons (Zero Font Dependencies, Crash-Proof) ---
 
-const CameraIcon = ({ size = 18, color = '#1e40af' }) => (
-  <View style={{ width: size + 2, height: size, alignItems: 'center', justifyContent: 'center' }}>
-    <View style={{ width: size * 0.38, height: 2, backgroundColor: color, borderRadius: 1, marginBottom: 1 }} />
-    <View
-      style={{
-        width: size + 2,
-        height: size - 2,
-        borderWidth: 1.6,
-        borderColor: color,
-        borderRadius: 3,
-        alignItems: 'center',
-        justifyContent: 'center',
-      }}
-    >
-      <View style={{ width: size * 0.38, height: size * 0.38, borderRadius: (size * 0.38) / 2, borderWidth: 1.4, borderColor: color }} />
+const CameraIcon = ({ size = 18, color = '#1e40af' }) => {
+  const bumpW = Math.round(size * 0.38);
+  const bumpH = Math.max(2, Math.round(size * 0.1));
+  const stroke = Math.max(1.6, Math.round(size * 0.08 * 10) / 10);
+  const lens = Math.round(size * 0.4);
+  return (
+    <View style={{ width: size + 2, height: size, alignItems: 'center', justifyContent: 'center' }}>
+      <View style={{ width: bumpW, height: bumpH, backgroundColor: color, borderRadius: 1, marginBottom: 1 }} />
+      <View
+        style={{
+          width: size + 2,
+          height: size - bumpH - 1,
+          borderWidth: stroke,
+          borderColor: color,
+          borderRadius: 4,
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+      >
+        <View style={{ width: lens, height: lens, borderRadius: lens / 2, borderWidth: stroke, borderColor: color }} />
+      </View>
     </View>
-  </View>
-);
+  );
+};
 
-const VideoIcon = ({ size = 18, color = '#444653' }) => (
-  <View style={{ width: size + 2, height: size, flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
-    <View
-      style={{
-        width: size * 0.72,
-        height: size * 0.68,
-        borderWidth: 1.6,
-        borderColor: color,
-        borderRadius: 3,
-      }}
-    />
-    <View
-      style={{
-        width: 0,
-        height: 0,
-        borderTopWidth: 4,
-        borderBottomWidth: 4,
-        borderLeftWidth: 5,
-        borderTopColor: 'transparent',
-        borderBottomColor: 'transparent',
-        borderLeftColor: color,
-        marginLeft: 1.5,
-      }}
-    />
-  </View>
-);
+const VideoIcon = ({ size = 18, color = '#444653' }) => {
+  const stroke = Math.max(1.6, Math.round(size * 0.08 * 10) / 10);
+  const triH = Math.max(4, Math.round(size * 0.26));
+  const triW = Math.max(5, Math.round(size * 0.28));
+  return (
+    <View style={{ width: size + 4, height: size, flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
+      <View
+        style={{
+          width: size * 0.68,
+          height: size * 0.64,
+          borderWidth: stroke,
+          borderColor: color,
+          borderRadius: 4,
+        }}
+      />
+      <View
+        style={{
+          width: 0,
+          height: 0,
+          borderTopWidth: triH,
+          borderBottomWidth: triH,
+          borderLeftWidth: triW,
+          borderTopColor: 'transparent',
+          borderBottomColor: 'transparent',
+          borderLeftColor: color,
+          marginLeft: 2,
+        }}
+      />
+    </View>
+  );
+};
 
 const FolderIcon = ({ size = 18, color = '#444653' }) => (
   <View style={{ width: size, height: size, justifyContent: 'center', alignItems: 'center' }}>
@@ -133,12 +145,71 @@ const OfficerIcon = ({ size = 18, color = '#ffffff' }) => (
   </View>
 );
 
+const ReplaceIcon = ({ size = 16, color = '#ffffff' }) => (
+  <View style={{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }}>
+    <View
+      style={{
+        width: size * 0.8,
+        height: size * 0.8,
+        borderRadius: (size * 0.8) / 2,
+        borderWidth: 1.8,
+        borderColor: color,
+        borderTopColor: 'transparent',
+      }}
+    />
+    <View
+      style={{
+        position: 'absolute',
+        top: 0.5,
+        left: size * 0.22,
+        width: 0,
+        height: 0,
+        borderTopWidth: 3,
+        borderBottomWidth: 3,
+        borderLeftWidth: 4.5,
+        borderTopColor: 'transparent',
+        borderBottomColor: 'transparent',
+        borderLeftColor: color,
+      }}
+    />
+  </View>
+);
+
+const RemoveIcon = ({ size = 14, color = '#ffffff' }) => (
+  <View style={{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }}>
+    <View
+      style={{
+        width: size * 0.85,
+        height: 2,
+        backgroundColor: color,
+        borderRadius: 1,
+        transform: [{ rotate: '45deg' }],
+        position: 'absolute',
+      }}
+    />
+    <View
+      style={{
+        width: size * 0.85,
+        height: 2,
+        backgroundColor: color,
+        borderRadius: 1,
+        transform: [{ rotate: '-45deg' }],
+        position: 'absolute',
+      }}
+    />
+  </View>
+);
+
 export default function VoteSubmissionScreen({ operator, selectedBooth }) {
-  // ✅ Preserved states:
+  // ✅ Preserved candidates and votes state:
   const [candidates, setCandidates] = useState([]);
   const [votes, setVotes] = useState({});
-  const [tallyImage, setTallyImage] = useState(null);
-  const [tallyVideo, setTallyVideo] = useState(null);
+  // ✅ Task 3: Separate states for Photo 1, Photo 2, and Video
+  const [photo1Uri, setPhoto1Uri] = useState(null);
+  const [photo2Uri, setPhoto2Uri] = useState(null);
+  const [videoUri, setVideoUri] = useState(null);
+  const [photo1Aspect, setPhoto1Aspect] = useState(null);
+  const [photo2Aspect, setPhoto2Aspect] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const [loading, setLoading] = useState(true);
 
@@ -183,26 +254,46 @@ export default function VoteSubmissionScreen({ operator, selectedBooth }) {
     updateVote(candidateId, next.toString());
   };
 
-  // Compress captured camera image to <200KB utilizing expo-image-manipulator (Preserved)
-  const compressAndSetImage = async (uri) => {
+  // Compress captured camera image to <200KB utilizing expo-image-manipulator and capture natural aspect ratio
+  const compressAndSetPhoto = async (uri, photoNumber) => {
     try {
       const manipResult = await ImageManipulator.manipulateAsync(
         uri,
         [{ resize: { width: 1024 } }],
         { compress: 0.7, format: ImageManipulator.SaveFormat.JPEG }
       );
-      setTallyImage({
-        uri: manipResult.uri,
-        width: manipResult.width,
-        height: manipResult.height,
-      });
+      const aspect =
+        manipResult.width && manipResult.height
+          ? manipResult.width / manipResult.height
+          : undefined;
+
+      if (photoNumber === 1) {
+        setPhoto1Uri(manipResult.uri);
+        if (aspect) setPhoto1Aspect(aspect);
+      } else {
+        setPhoto2Uri(manipResult.uri);
+        if (aspect) setPhoto2Aspect(aspect);
+      }
     } catch (err) {
       console.warn("Failed to compress image, using fallback:", err);
-      setTallyImage({ uri });
+      Image.getSize(
+        uri,
+        (width, height) => {
+          const aspect = width / height;
+          if (photoNumber === 1) setPhoto1Aspect(aspect);
+          else setPhoto2Aspect(aspect);
+        },
+        () => { }
+      );
+      if (photoNumber === 1) {
+        setPhoto1Uri(uri);
+      } else {
+        setPhoto2Uri(uri);
+      }
     }
   };
 
-  const pickImage = async () => {
+  const pickPhoto = async (photoNumber) => {
     const { status } = await ImagePicker.requestCameraPermissionsAsync();
     if (status !== "granted") {
       Alert.alert(
@@ -217,28 +308,8 @@ export default function VoteSubmissionScreen({ operator, selectedBooth }) {
       quality: 0.8,
     });
 
-    if (!result.canceled && result.assets.length > 0) {
-      await compressAndSetImage(result.assets[0].uri);
-    }
-  };
-
-  const pickFromGallery = async () => {
-    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (status !== "granted") {
-      Alert.alert(
-        "Permission Denied",
-        "Gallery access is required to select tally sheet.",
-      );
-      return;
-    }
-
-    let result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      quality: 0.8,
-    });
-
-    if (!result.canceled && result.assets.length > 0) {
-      await compressAndSetImage(result.assets[0].uri);
+    if (!result.canceled && result.assets && result.assets.length > 0) {
+      await compressAndSetPhoto(result.assets[0].uri, photoNumber);
     }
   };
 
@@ -256,16 +327,16 @@ export default function VoteSubmissionScreen({ operator, selectedBooth }) {
       mediaTypes: ImagePicker.MediaTypeOptions.Videos,
     });
 
-    if (!result.canceled && result.assets.length > 0) {
+    if (!result.canceled && result.assets && result.assets.length > 0) {
       try {
         const compressedUri = await VideoCompressor.compress(
           result.assets[0].uri,
           { compressionMethod: 'auto' }
         );
-        setTallyVideo(compressedUri);
+        setVideoUri(compressedUri);
       } catch (err) {
         console.warn("Failed to compress video, using fallback:", err);
-        setTallyVideo(result.assets[0].uri);
+        setVideoUri(result.assets[0].uri);
       }
     }
   };
@@ -285,10 +356,11 @@ export default function VoteSubmissionScreen({ operator, selectedBooth }) {
       votePayload[c.candidate_id] = count;
     }
 
-    if (!tallyImage) {
+    // Task 4: Strict validation logic checking all 3 media items
+    if (!photo1Uri || !photo2Uri || !videoUri) {
       Alert.alert(
-        "Missing Photo",
-        "Please capture the physical tally sheet photo before submitting.",
+        "Missing Required Media",
+        "All 3 media attachments (Image 1, Image 2, and Video) are strictly required before submitting.",
       );
       return;
     }
@@ -302,14 +374,20 @@ export default function VoteSubmissionScreen({ operator, selectedBooth }) {
       formData.append("votes", JSON.stringify(votePayload));
 
       formData.append("tally_sheet", {
-        uri: tallyImage.uri,
-        name: `tally_${selectedBooth.booth_id}_${Date.now()}.jpg`,
+        uri: photo1Uri,
+        name: `tally_1_${selectedBooth.booth_id}_${Date.now()}.jpg`,
         type: "image/jpeg",
       });
 
-      if (tallyVideo) {
+      formData.append("tally_sheet_2", {
+        uri: photo2Uri,
+        name: `tally_2_${selectedBooth.booth_id}_${Date.now()}.jpg`,
+        type: "image/jpeg",
+      });
+
+      if (videoUri) {
         formData.append("tally_video", {
-          uri: tallyVideo,
+          uri: videoUri,
           name: "tally_video.mp4",
           type: "video/mp4",
         });
@@ -320,7 +398,7 @@ export default function VoteSubmissionScreen({ operator, selectedBooth }) {
       if (data.success) {
         Alert.alert(
           "Success!",
-          "Vote results and tally sheet photo successfully recorded.",
+          "Vote results, Tally Sheets, and Video successfully recorded.",
         );
 
         // Reset form for potential re-submission
@@ -329,8 +407,11 @@ export default function VoteSubmissionScreen({ operator, selectedBooth }) {
           resetVotes[c.candidate_id] = "";
         });
         setVotes(resetVotes);
-        setTallyImage(null);
-        setTallyVideo(null);
+        setPhoto1Uri(null);
+        setPhoto2Uri(null);
+        setVideoUri(null);
+        setPhoto1Aspect(null);
+        setPhoto2Aspect(null);
       } else {
         Alert.alert("Submission Failed", data.message || "Error saving votes");
       }
@@ -350,7 +431,8 @@ export default function VoteSubmissionScreen({ operator, selectedBooth }) {
     );
   }
 
-  const attachedCount = (tallyImage ? 1 : 0) + (tallyVideo ? 1 : 0);
+  const attachedCount = (photo1Uri ? 1 : 0) + (photo2Uri ? 1 : 0) + (videoUri ? 1 : 0);
+  const isSubmissionReady = Boolean(photo1Uri && photo2Uri && videoUri);
 
   return (
     <KeyboardAvoidingView
@@ -362,6 +444,7 @@ export default function VoteSubmissionScreen({ operator, selectedBooth }) {
         keyExtractor={(item) => item.candidate_id.toString()}
         contentContainerStyle={styles.listContent}
         showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
         ListHeaderComponent={
           <View style={styles.headerSection}>
             <Text style={styles.sectionTitle}>CANDIDATE RETURNS</Text>
@@ -431,102 +514,129 @@ export default function VoteSubmissionScreen({ operator, selectedBooth }) {
         }}
         ListFooterComponent={
           <View style={styles.footer}>
-            {/* Booth Media & Form EC8A Section */}
-            {/* <View style={styles.mediaHeaderRow}>
+            {/* Booth Media & Form EC8A Section Header */}
+            <View style={styles.mediaHeaderRow}>
               <View style={styles.mediaTitleLeft}>
-                <Text style={styles.mediaSectionTitle}>BOOTH MEDIA & FORM EC8A</Text>
+                <Text style={styles.mediaSectionTitle}>BOOTH MEDIA & EVIDENCE</Text>
                 <View style={styles.mandatoryBadge}>
-                  <Text style={styles.mandatoryBadgeText}>EC8A Mandatory</Text>
+                  <Text style={styles.mandatoryBadgeText}>All 3 Mandatory</Text>
                 </View>
               </View>
-              <Text style={styles.attachedCountText}>{attachedCount} of 2 attached</Text>
-            </View> */}
-
-            {/* 3-Column Action Grid */}
-            <View style={styles.mediaGrid}>
-              {/* 1. Camera Button */}
-              <TouchableOpacity
-                style={[
-                  styles.mediaCard,
-                  tallyImage && styles.mediaCardActive,
-                ]}
-                onPress={pickImage}
-                activeOpacity={0.8}
-              >
-                <View style={[styles.mediaIconBox, tallyImage && styles.mediaIconBoxActive]}>
-                  <CameraIcon size={18} color={tallyImage ? "#1e40af" : "#444653"} />
-                </View>
-                <Text style={styles.mediaLabel}>Camera</Text>
-                <Text
-                  style={[
-                    styles.mediaSubtext,
-                    tallyImage && styles.mediaSubtextActive,
-                  ]}
-                  numberOfLines={1}
-                >
-                  {tallyImage ? "EC8A Sheet • Added" : "EC8A Sheet"}
-                </Text>
-              </TouchableOpacity>
-
-              {/* 2. Video Button */}
-              <TouchableOpacity
-                style={[
-                  styles.mediaCard,
-                  tallyVideo && styles.mediaCardActive,
-                ]}
-                onPress={recordVideo}
-                activeOpacity={0.8}
-              >
-                <View style={[styles.mediaIconBox, tallyVideo && styles.mediaIconBoxActive]}>
-                  <VideoIcon size={18} color={tallyVideo ? "#1e40af" : "#444653"} />
-                </View>
-                <Text style={styles.mediaLabel}>Record Video</Text>
-                <Text
-                  style={[
-                    styles.mediaSubtext,
-                    tallyVideo && styles.mediaSubtextActive,
-                  ]}
-                  numberOfLines={1}
-                >
-                  {tallyVideo ? "Video Added" : "Announcement"}
-                </Text>
-              </TouchableOpacity>
-
-              {/* 3. Files Button */}
-              {/* <TouchableOpacity
-                style={styles.mediaCard}
-                onPress={pickFromGallery}
-                activeOpacity={0.8}
-              >
-                <View style={styles.mediaIconBox}>
-                  <FolderIcon size={18} color="#444653" />
-                </View>
-                <Text style={styles.mediaLabel}>From Files</Text>
-                <Text style={styles.mediaSubtext} numberOfLines={1}>
-                  {tallyImage ? "1 attached" : "0 attached"}
-                </Text>
-              </TouchableOpacity> */}
+              <Text style={styles.attachedCountText}>{attachedCount} of 3 attached</Text>
             </View>
 
-            {/* Attached Video Notification */}
-            {tallyVideo && (
-              <View style={styles.attachedBanner}>
-                <Text style={styles.attachedBannerText}>✓ Video Announcement Recorded & Compressed</Text>
-              </View>
-            )}
-
-            {/* Attached Photo Preview */}
-            {tallyImage && (
-              <View style={styles.previewContainer}>
-                <Image
-                  source={{ uri: tallyImage.uri }}
-                  style={styles.previewImage}
-                />
-                <View style={styles.previewBadge}>
-                  <Text style={styles.previewBadgeText}>EC8A Photo Attached</Text>
+            {/* Media Upload Cards */}
+            <View style={styles.mediaStack}>
+              {/* 1. Photo 1 Card */}
+              {!photo1Uri ? (
+                <TouchableOpacity
+                  style={styles.mediaCard}
+                  onPress={() => pickPhoto(1)}
+                  activeOpacity={0.7}
+                >
+                  <View style={styles.iconCircle}>
+                    <CameraIcon size={26} color="#2563EB" />
+                  </View>
+                  <Text style={styles.emptyCardText}>Take a Photo</Text>
+                </TouchableOpacity>
+              ) : (
+                <View style={styles.mediaCard}>
+                  <Image
+                    source={{ uri: photo1Uri }}
+                    style={[
+                      styles.mediaPreview,
+                      { aspectRatio: photo1Aspect || 3 / 4 },
+                    ]}
+                    resizeMode="contain"
+                    onLoad={(e) => {
+                      const { width, height } = e.nativeEvent.source;
+                      if (width && height && height > 0) {
+                        setPhoto1Aspect(width / height);
+                      }
+                    }}
+                  />
+                  <TouchableOpacity
+                    style={styles.retakeBtn}
+                    onPress={() => pickPhoto(1)}
+                    activeOpacity={0.7}
+                  >
+                    <CameraIcon size={16} color="#2563EB" />
+                    <Text style={styles.retakeBtnText}>Retake</Text>
+                  </TouchableOpacity>
                 </View>
-              </View>
-            )}
+              )}
+
+              {/* 2. Photo 2 Card */}
+              {!photo2Uri ? (
+                <TouchableOpacity
+                  style={styles.mediaCard}
+                  onPress={() => pickPhoto(2)}
+                  activeOpacity={0.7}
+                >
+                  <View style={styles.iconCircle}>
+                    <CameraIcon size={26} color="#2563EB" />
+                  </View>
+                  <Text style={styles.emptyCardText}>Take a Photo</Text>
+                </TouchableOpacity>
+              ) : (
+                <View style={styles.mediaCard}>
+                  <Image
+                    source={{ uri: photo2Uri }}
+                    style={[
+                      styles.mediaPreview,
+                      { aspectRatio: photo2Aspect || 3 / 4 },
+                    ]}
+                    resizeMode="contain"
+                    onLoad={(e) => {
+                      const { width, height } = e.nativeEvent.source;
+                      if (width && height && height > 0) {
+                        setPhoto2Aspect(width / height);
+                      }
+                    }}
+                  />
+                  <TouchableOpacity
+                    style={styles.retakeBtn}
+                    onPress={() => pickPhoto(2)}
+                    activeOpacity={0.7}
+                  >
+                    <CameraIcon size={16} color="#2563EB" />
+                    <Text style={styles.retakeBtnText}>Retake</Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+
+              {/* 3. Video Card */}
+              {!videoUri ? (
+                <TouchableOpacity
+                  style={styles.mediaCard}
+                  onPress={recordVideo}
+                  activeOpacity={0.7}
+                >
+                  <View style={styles.iconCircle}>
+                    <VideoIcon size={26} color="#2563EB" />
+                  </View>
+                  <Text style={styles.emptyCardText}>Record video</Text>
+                </TouchableOpacity>
+              ) : (
+                <View style={styles.mediaCard}>
+                  <Video
+                    source={{ uri: videoUri }}
+                    style={styles.videoPreview}
+                    useNativeControls={true}
+                    resizeMode={ResizeMode.CONTAIN}
+                    isLooping={false}
+                  />
+                  <TouchableOpacity
+                    style={styles.retakeBtn}
+                    onPress={recordVideo}
+                    activeOpacity={0.7}
+                  >
+                    <CameraIcon size={16} color="#2563EB" />
+                    <Text style={styles.retakeBtnText}>Re-record</Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+            </View>
 
             {/* Legal Compliance & Safety Callout */}
             <View style={styles.complianceBox}>
@@ -536,11 +646,14 @@ export default function VoteSubmissionScreen({ operator, selectedBooth }) {
               </Text>
             </View>
 
-            {/* Primary Submission Button */}
+            {/* Primary Submission Button - Strictly disabled unless all 3 media items are attached */}
             <TouchableOpacity
-              style={[styles.submitBtn, submitting && styles.submitBtnDisabled]}
+              style={[
+                styles.submitBtn,
+                (!isSubmissionReady || submitting) && styles.submitBtnDisabled,
+              ]}
               onPress={submitData}
-              disabled={submitting}
+              disabled={!isSubmissionReady || submitting}
               activeOpacity={0.85}
             >
               {submitting ? (
@@ -556,7 +669,9 @@ export default function VoteSubmissionScreen({ operator, selectedBooth }) {
               )}
             </TouchableOpacity>
             <Text style={styles.confirmationHint}>
-              Requires booth officer confirmation
+              {!isSubmissionReady
+                ? "⚠️ All 3 media items required (Image 1, Image 2 and Video)"
+                : "Requires booth officer confirmation"}
             </Text>
           </View>
         }
@@ -737,103 +852,61 @@ const styles = StyleSheet.create({
     color: '#64748b',
     fontWeight: '600',
   },
-  mediaGrid: {
-    flexDirection: 'row',
-    gap: 10,
-    marginBottom: 12,
+  mediaStack: {
+    flexDirection: 'column',
+    width: '100%',
   },
   mediaCard: {
-    flex: 1,
-    backgroundColor: '#ffffff',
-    borderRadius: 14,
     borderWidth: 1,
-    borderColor: 'rgba(196, 197, 213, 0.5)',
-    paddingVertical: 12,
-    paddingHorizontal: 6,
-    alignItems: 'center',
-    justifyContent: 'center',
-    minHeight: 88,
-    shadowColor: '#0f172a',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.04,
-    shadowRadius: 4,
-    elevation: 1,
-  },
-  mediaCardActive: {
-    borderColor: '#1e40af',
-    borderWidth: 2,
-  },
-  mediaIconBox: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: '#eaedff',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 4,
-  },
-  mediaIconBoxActive: {
-    backgroundColor: '#dde1ff',
-  },
-  mediaLabel: {
-    fontSize: 11.5,
-    fontWeight: '700',
-    color: '#0f172a',
-    textAlign: 'center',
-  },
-  mediaSubtext: {
-    fontSize: 9.5,
-    color: '#94a3b8',
-    fontWeight: '600',
-    textAlign: 'center',
-    marginTop: 2,
-  },
-  mediaSubtextActive: {
-    color: '#1e40af',
-    fontWeight: '700',
-  },
-  attachedBanner: {
-    backgroundColor: 'rgba(22, 163, 74, 0.1)',
-    borderWidth: 1,
-    borderColor: 'rgba(22, 163, 74, 0.25)',
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 10,
-    marginBottom: 12,
+    borderColor: '#E5E7EB',
+    borderRadius: 12,
+    backgroundColor: '#FFFFFF',
+    padding: 24,
+    marginBottom: 16,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  attachedBannerText: {
-    color: '#15803d',
-    fontWeight: '700',
-    fontSize: 12,
+  iconCircle: {
+    backgroundColor: '#EEF2FF',
+    padding: 16,
+    borderRadius: 50,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  previewContainer: {
-    position: 'relative',
-    marginBottom: 12,
-    borderRadius: 14,
-    overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: '#e2e8f0',
+  emptyCardText: {
+    color: '#4B5563',
+    marginTop: 12,
+    fontSize: 14,
   },
-  previewImage: {
+  mediaPreview: {
     width: '100%',
-    height: 180,
-    resizeMode: 'cover',
+    borderRadius: 8,
+    marginBottom: 16,
+    overflow: 'hidden',
   },
-  previewBadge: {
-    position: 'absolute',
-    bottom: 8,
-    left: 8,
-    backgroundColor: 'rgba(15, 23, 42, 0.75)',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 6,
+  videoPreview: {
+    width: '100%',
+    height: 220,
+    borderRadius: 8,
+    marginBottom: 16,
+    overflow: 'hidden',
+    backgroundColor: '#000000',
   },
-  previewBadgeText: {
-    color: '#ffffff',
-    fontSize: 10.5,
-    fontWeight: '700',
+  retakeBtn: {
+    backgroundColor: '#EEF2FF',
+    paddingVertical: 8,
+    paddingHorizontal: 20,
+    borderRadius: 24,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    alignSelf: 'center',
+  },
+  retakeBtnText: {
+    color: '#2563EB',
+    fontSize: 14,
+    fontWeight: '600',
+    marginLeft: 8,
   },
   complianceBox: {
     flexDirection: 'row',
@@ -865,7 +938,10 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   submitBtnDisabled: {
-    opacity: 0.75,
+    backgroundColor: '#94a3b8',
+    opacity: 0.65,
+    shadowOpacity: 0,
+    elevation: 0,
   },
   btnContent: {
     flexDirection: 'row',
