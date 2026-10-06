@@ -198,12 +198,15 @@ const styles = StyleSheet.create({
     backgroundColor: '#ffffff',
     paddingVertical: 10,
     paddingHorizontal: 16,
+    width: '100%',
+    maxWidth: 960,
+    alignSelf: 'center',
   },
   userInfo: {
     flexDirection: 'row',
     alignItems: 'center',
     flex: 1,
-    marginRight: 10,
+    marginRight: 8,
     minWidth: 0,
   },
   avatarContainer: {
@@ -245,12 +248,14 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 5,
+    maxWidth: '100%',
   },
   userName: {
     fontSize: 15,
     fontWeight: '800',
     color: '#0f172a',
     letterSpacing: -0.2,
+    flexShrink: 1,
   },
   boothBadge: {
     alignSelf: 'flex-start',
@@ -261,7 +266,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 1.5,
     marginTop: 3,
-    maxWidth: '92%',
+    maxWidth: '100%',
   },
   boothBadgeText: {
     fontSize: 10.5,
@@ -277,6 +282,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
+    flexShrink: 0,
   },
   changeBtn: {
     borderWidth: 1,

@@ -12,6 +12,7 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Image,
+  useWindowDimensions,
 } from 'react-native';
 import { apiCall, setAuthToken } from '../api/client';
 
@@ -194,6 +195,9 @@ const SupportIcon = ({ color = '#1e40af' }) => (
 );
 
 export default function LoginScreen({ onLoginSuccess }) {
+  const { width: windowWidth } = useWindowDimensions();
+  const isSmallScreen = windowWidth < 360;
+
   // ✅ Empty initial values (Preserved exactly):
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -256,7 +260,7 @@ export default function LoginScreen({ onLoginSuccess }) {
         style={{ flex: 1 }}
       >
         <ScrollView
-          contentContainerStyle={styles.scroll}
+          contentContainerStyle={[styles.scroll, isSmallScreen && { paddingHorizontal: 10 }]}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
@@ -286,7 +290,7 @@ export default function LoginScreen({ onLoginSuccess }) {
             </View>
 
             {/* Form Content */}
-            <View style={styles.form}>
+            <View style={[styles.form, isSmallScreen && { paddingHorizontal: 14 }]}>
               {/* Presiding Officer Notice */}
               {/* <View style={styles.noticeBox}>
                 <View style={styles.noticeIconWrapper}>

@@ -11,10 +11,10 @@ import {
   Platform,
   ActivityIndicator,
   StyleSheet,
+  useWindowDimensions,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import * as ImageManipulator from 'expo-image-manipulator';
-import { Video as VideoCompressor } from 'react-native-compressor';
 import { Video, ResizeMode } from 'expo-av';
 import { apiCall } from '../api/client';
 import { COLORS, RADIUS, SPACING, FONTS } from '../theme';
@@ -201,6 +201,10 @@ const RemoveIcon = ({ size = 14, color = '#ffffff' }) => (
 );
 
 export default function VoteSubmissionScreen({ operator, selectedBooth }) {
+  const { width: windowWidth } = useWindowDimensions();
+  const isTablet = windowWidth >= 768;
+  const isSmallScreen = windowWidth < 360;
+
   // ✅ Preserved candidates and votes state:
   const [candidates, setCandidates] = useState([]);
   const [votes, setVotes] = useState({});
@@ -323,21 +327,15 @@ export default function VoteSubmissionScreen({ operator, selectedBooth }) {
       return;
     }
 
-    let result = await ImagePicker.launchCameraAsync({
+    const result = await ImagePicker.launchCameraAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Videos,
+      allowsEditing: false,
+      quality: 0.5,
+      videoMaxDuration: 30,
     });
 
     if (!result.canceled && result.assets && result.assets.length > 0) {
-      try {
-        const compressedUri = await VideoCompressor.compress(
-          result.assets[0].uri,
-          { compressionMethod: 'auto' }
-        );
-        setVideoUri(compressedUri);
-      } catch (err) {
-        console.warn("Failed to compress video, using fallback:", err);
-        setVideoUri(result.assets[0].uri);
-      }
+      setVideoUri(result.assets[0].uri);
     }
   };
 
@@ -398,7 +396,7 @@ export default function VoteSubmissionScreen({ operator, selectedBooth }) {
       if (data.success) {
         Alert.alert(
           "Success!",
-          "Vote results, Tally Sheets, and Video successfully recorded.",
+          "Polling record uploaded successfully!",
         );
 
         // Reset form for potential re-submission
@@ -442,7 +440,10 @@ export default function VoteSubmissionScreen({ operator, selectedBooth }) {
       <FlatList
         data={candidates}
         keyExtractor={(item) => item.candidate_id.toString()}
-        contentContainerStyle={styles.listContent}
+        contentContainerStyle={[
+          styles.listContent,
+          isTablet && styles.listContentTablet,
+        ]}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
         ListHeaderComponent={
@@ -530,17 +531,25 @@ export default function VoteSubmissionScreen({ operator, selectedBooth }) {
               {/* 1. Photo 1 Card */}
               {!photo1Uri ? (
                 <TouchableOpacity
-                  style={styles.mediaCard}
+                  style={[
+                    styles.mediaCard,
+                    isTablet && styles.mediaCardTablet,
+                    isSmallScreen && styles.mediaCardSmall,
+                  ]}
                   onPress={() => pickPhoto(1)}
                   activeOpacity={0.7}
                 >
                   <View style={styles.iconCircle}>
                     <CameraIcon size={26} color="#2563EB" />
                   </View>
-                  <Text style={styles.emptyCardText}>Take a Photo</Text>
+                  <Text style={styles.emptyCardText} numberOfLines={2}>Take a Photo</Text>
                 </TouchableOpacity>
               ) : (
-                <View style={styles.mediaCard}>
+                <View style={[
+                  styles.mediaCard,
+                  isTablet && styles.mediaCardTablet,
+                  isSmallScreen && styles.mediaCardSmall,
+                ]}>
                   <Image
                     source={{ uri: photo1Uri }}
                     style={[
@@ -569,17 +578,25 @@ export default function VoteSubmissionScreen({ operator, selectedBooth }) {
               {/* 2. Photo 2 Card */}
               {!photo2Uri ? (
                 <TouchableOpacity
-                  style={styles.mediaCard}
+                  style={[
+                    styles.mediaCard,
+                    isTablet && styles.mediaCardTablet,
+                    isSmallScreen && styles.mediaCardSmall,
+                  ]}
                   onPress={() => pickPhoto(2)}
                   activeOpacity={0.7}
                 >
                   <View style={styles.iconCircle}>
                     <CameraIcon size={26} color="#2563EB" />
                   </View>
-                  <Text style={styles.emptyCardText}>Take a Photo</Text>
+                  <Text style={styles.emptyCardText} numberOfLines={2}>Take a Photo</Text>
                 </TouchableOpacity>
               ) : (
-                <View style={styles.mediaCard}>
+                <View style={[
+                  styles.mediaCard,
+                  isTablet && styles.mediaCardTablet,
+                  isSmallScreen && styles.mediaCardSmall,
+                ]}>
                   <Image
                     source={{ uri: photo2Uri }}
                     style={[
@@ -608,20 +625,31 @@ export default function VoteSubmissionScreen({ operator, selectedBooth }) {
               {/* 3. Video Card */}
               {!videoUri ? (
                 <TouchableOpacity
-                  style={styles.mediaCard}
+                  style={[
+                    styles.mediaCard,
+                    isTablet && styles.mediaCardTablet,
+                    isSmallScreen && styles.mediaCardSmall,
+                  ]}
                   onPress={recordVideo}
                   activeOpacity={0.7}
                 >
                   <View style={styles.iconCircle}>
                     <VideoIcon size={26} color="#2563EB" />
                   </View>
-                  <Text style={styles.emptyCardText}>Record video</Text>
+                  <Text style={styles.emptyCardText} numberOfLines={2}>Record video</Text>
                 </TouchableOpacity>
               ) : (
-                <View style={styles.mediaCard}>
+                <View style={[
+                  styles.mediaCard,
+                  isTablet && styles.mediaCardTablet,
+                  isSmallScreen && styles.mediaCardSmall,
+                ]}>
                   <Video
                     source={{ uri: videoUri }}
-                    style={styles.videoPreview}
+                    style={[
+                      styles.videoPreview,
+                      isTablet && { height: 320 },
+                    ]}
                     useNativeControls={true}
                     resizeMode={ResizeMode.CONTAIN}
                     isLooping={false}
@@ -701,6 +729,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingTop: 12,
     paddingBottom: 40,
+    width: '100%',
+  },
+  listContentTablet: {
+    maxWidth: 680,
+    alignSelf: 'center',
+    paddingHorizontal: 24,
   },
   headerSection: {
     flexDirection: 'row',
@@ -735,19 +769,20 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.04,
     shadowRadius: 4,
     elevation: 2,
+    width: '100%',
   },
   candidateLeft: {
     flexDirection: 'row',
     alignItems: 'center',
     flex: 1,
-    marginRight: 10,
+    marginRight: 8,
     minWidth: 0,
   },
   partyIcon: {
     width: 42,
     height: 42,
     borderRadius: 21,
-    marginRight: 12,
+    marginRight: 10,
     borderWidth: 1.5,
     borderColor: 'rgba(30, 64, 175, 0.15)',
   },
@@ -760,7 +795,7 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(30, 64, 175, 0.2)',
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 12,
+    marginRight: 10,
   },
   partyAvatarText: {
     color: '#1e40af',
@@ -786,7 +821,8 @@ const styles = StyleSheet.create({
   stepperContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: 4,
+    flexShrink: 0,
   },
   stepperBtn: {
     width: 32,
@@ -803,31 +839,37 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
   voteInput: {
-    width: 60,
+    width: 54,
+    minWidth: 46,
+    maxWidth: 64,
     height: 42,
     textAlign: 'center',
     backgroundColor: '#ffffff',
     borderWidth: 1,
     borderColor: '#cbd5e1',
     borderRadius: 8,
-    fontSize: 18,
+    fontSize: 17,
     fontWeight: '800',
     color: '#0f172a',
     padding: 0,
   },
   footer: {
     marginTop: 8,
+    width: '100%',
   },
   mediaHeaderRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    flexWrap: 'wrap',
+    rowGap: 6,
     marginBottom: 10,
     paddingHorizontal: 2,
   },
   mediaTitleLeft: {
     flexDirection: 'row',
     alignItems: 'center',
+    flexWrap: 'wrap',
     gap: 6,
   },
   mediaSectionTitle: {
@@ -861,10 +903,20 @@ const styles = StyleSheet.create({
     borderColor: '#E5E7EB',
     borderRadius: 12,
     backgroundColor: '#FFFFFF',
-    padding: 24,
+    paddingVertical: 20,
+    paddingHorizontal: 16,
     marginBottom: 16,
+    width: '100%',
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  mediaCardTablet: {
+    paddingVertical: 26,
+    paddingHorizontal: 24,
+  },
+  mediaCardSmall: {
+    paddingVertical: 16,
+    paddingHorizontal: 12,
   },
   iconCircle: {
     backgroundColor: '#EEF2FF',
@@ -875,11 +927,17 @@ const styles = StyleSheet.create({
   },
   emptyCardText: {
     color: '#4B5563',
-    marginTop: 12,
+    marginTop: 10,
     fontSize: 14,
+    textAlign: 'center',
+    flexShrink: 1,
+    maxWidth: '100%',
+    paddingHorizontal: 10,
+    lineHeight: 18,
   },
   mediaPreview: {
     width: '100%',
+    maxHeight: 520,
     borderRadius: 8,
     marginBottom: 16,
     overflow: 'hidden',
@@ -887,6 +945,7 @@ const styles = StyleSheet.create({
   videoPreview: {
     width: '100%',
     height: 220,
+    maxHeight: 380,
     borderRadius: 8,
     marginBottom: 16,
     overflow: 'hidden',
@@ -901,12 +960,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     alignSelf: 'center',
+    maxWidth: '90%',
   },
   retakeBtnText: {
     color: '#2563EB',
     fontSize: 14,
     fontWeight: '600',
     marginLeft: 8,
+    flexShrink: 1,
   },
   complianceBox: {
     flexDirection: 'row',
@@ -918,6 +979,7 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(196, 197, 213, 0.4)',
     padding: 12,
     marginBottom: 14,
+    width: '100%',
   },
   complianceText: {
     flex: 1,
@@ -927,6 +989,7 @@ const styles = StyleSheet.create({
   },
   submitBtn: {
     height: 50,
+    width: '100%',
     backgroundColor: '#1e40af',
     borderRadius: 12,
     alignItems: 'center',
@@ -958,6 +1021,8 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: '#94a3b8',
     textAlign: 'center',
-    marginTop: 6,
+    marginTop: 8,
+    paddingHorizontal: 8,
+    lineHeight: 16,
   },
 });

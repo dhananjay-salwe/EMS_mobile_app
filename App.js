@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { StyleSheet, SafeAreaView, Platform, StatusBar } from 'react-native';
 import Header from './src/components/Header';
 import LoginScreen from './src/screens/LoginScreen';
@@ -8,10 +8,47 @@ import ProfileScreen from './src/screens/ProfileScreen';
 import { COLORS } from './src/theme';
 import { setAuthToken } from './src/api/client';
 
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import WalkthroughScreen from './src/screens/WalkthroughScreen';
+
+const DEV_FORCE_WALKTHROUGH = true;
+
 export default function App() {
   const [operator, setOperator] = useState(null);
   const [selectedBooth, setSelectedBooth] = useState(null);
   const [showProfile, setShowProfile] = useState(false);
+
+  const [isFirstLaunch, setIsFirstLaunch] = useState(null);
+
+  // useEffect(() => {
+  //   const checkFirstLaunch = async () => {
+  //     try {
+  //       const value = await AsyncStorage.getItem('hasSeenWalkthrough');
+  //       setIsFirstLaunch(value === null);
+  //     } catch (e) {
+  //       setIsFirstLaunch(false);
+  //     }
+  //   };
+  //   checkFirstLaunch();
+  // }, []);
+  useEffect(() => {
+    const checkFirstLaunch = async () => {
+      try {
+        if (__DEV__ && DEV_FORCE_WALKTHROUGH) {
+          // Clears the saved flag so you can test fresh every time
+          await AsyncStorage.removeItem('hasSeenWalkthrough');
+          setIsFirstLaunch(true);
+          return;
+        }
+
+        const value = await AsyncStorage.getItem('hasSeenWalkthrough');
+        setIsFirstLaunch(value === null);
+      } catch (e) {
+        setIsFirstLaunch(false);
+      }
+    };
+    checkFirstLaunch();
+  }, []);
 
   const handleLogout = () => {
     setAuthToken(null);
@@ -35,6 +72,18 @@ export default function App() {
   const handleUpdateOperator = (updatedFields) => {
     setOperator((prev) => ({ ...prev, ...updatedFields }));
   };
+
+  // While reading storage, return null or a simple ActivityIndicator
+  if (isFirstLaunch === null) {
+    return null;
+  }
+
+  // If first launch, show WalkthroughScreen
+  if (isFirstLaunch) {
+    return <WalkthroughScreen onDone={() => setIsFirstLaunch(false)} />;
+  }
+
+  // Existing logic continues below (operator === null ? <LoginScreen /> : ...)
 
   // 1. Show Login Screen if unauthenticated
   if (!operator) {

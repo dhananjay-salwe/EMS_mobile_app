@@ -1,11 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, Text, View, TouchableOpacity, FlatList, SafeAreaView, ActivityIndicator } from 'react-native';
+import { StyleSheet, Text, View, TouchableOpacity, FlatList, SafeAreaView, ActivityIndicator, useWindowDimensions } from 'react-native';
 import { apiCall } from '../api/client';
 import { COLORS, RADIUS, SPACING, FONTS, SHADOW } from '../theme';
 
 const STEPS = ['State', 'LGA', 'Ward', 'Booth'];
 
 export default function LocationSelectScreen({ onBoothSelected }) {
+  const { width: windowWidth } = useWindowDimensions();
+  const isTablet = windowWidth >= 768;
+  const isSmallScreen = windowWidth < 360;
+
   const [locations, setLocations] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -54,20 +58,38 @@ export default function LocationSelectScreen({ onBoothSelected }) {
 
   return (
     <SafeAreaView style={styles.container}>
-      <Text style={styles.heading}>Select assigned polling unit</Text>
-      <Text style={styles.subheading}>Filter through the region hierarchy to select your booth</Text>
+      <View style={[styles.contentWrapper, isTablet && styles.contentWrapperTablet]}>
+        <Text style={styles.heading}>Select assigned polling unit</Text>
+        <Text style={styles.subheading}>Filter through the region hierarchy to select your booth</Text>
 
-      <View style={styles.stepBar}>
-        {STEPS.map((s, i) => (
-          <View key={s} style={styles.stepBarItem}>
-            <View style={[styles.stepDot, i <= currentStepIndex && styles.stepDotActive]}>
-              <Text style={[styles.stepDotText, i <= currentStepIndex && styles.stepDotTextActive]}>{i + 1}</Text>
+        <View style={styles.stepBar}>
+          {STEPS.map((s, i) => (
+            <View key={s} style={styles.stepBarItem}>
+              <View style={[styles.stepDot, i <= currentStepIndex && styles.stepDotActive]}>
+                <Text style={[styles.stepDotText, i <= currentStepIndex && styles.stepDotTextActive]}>{i + 1}</Text>
+              </View>
+              <Text
+                style={[
+                  styles.stepBarLabel,
+                  i <= currentStepIndex && styles.stepBarLabelActive,
+                  isSmallScreen && styles.stepBarLabelSmall,
+                ]}
+                numberOfLines={1}
+              >
+                {s}
+              </Text>
+              {i < STEPS.length - 1 && (
+                <View
+                  style={[
+                    styles.stepLine,
+                    i < currentStepIndex && styles.stepLineActive,
+                    isSmallScreen && { marginHorizontal: 2 },
+                  ]}
+                />
+              )}
             </View>
-            <Text style={[styles.stepBarLabel, i <= currentStepIndex && styles.stepBarLabelActive]}>{s}</Text>
-            {i < STEPS.length - 1 && <View style={[styles.stepLine, i < currentStepIndex && styles.stepLineActive]} />}
-          </View>
-        ))}
-      </View>
+          ))}
+        </View>
 
       {/* 1. SELECT STATE */}
       {!selectedState && (
@@ -148,12 +170,15 @@ export default function LocationSelectScreen({ onBoothSelected }) {
           />
         </View>
       )}
+      </View>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.bodyBg, padding: SPACING.md },
+  contentWrapper: { flex: 1, width: '100%' },
+  contentWrapperTablet: { maxWidth: 680, alignSelf: 'center', width: '100%' },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: COLORS.bodyBg },
   heading: { fontSize: 19, fontWeight: '700', fontFamily: FONTS.bold, color: COLORS.textDark },
   subheading: { fontSize: 12.5, color: COLORS.textMuted, marginBottom: 16, marginTop: 3 },
@@ -167,7 +192,8 @@ const styles = StyleSheet.create({
   stepDotActive: { backgroundColor: COLORS.primary },
   stepDotText: { fontSize: 11, fontWeight: '700', color: COLORS.textMuted },
   stepDotTextActive: { color: COLORS.white },
-  stepBarLabel: { fontSize: 10.5, color: COLORS.textMuted, marginLeft: 5, fontWeight: '600' },
+  stepBarLabel: { fontSize: 10.5, color: COLORS.textMuted, marginLeft: 5, fontWeight: '600', flexShrink: 1 },
+  stepBarLabelSmall: { fontSize: 9.5, marginLeft: 3 },
   stepBarLabelActive: { color: COLORS.textDark },
   stepLine: { flex: 1, height: 2, backgroundColor: '#eef0f4', marginHorizontal: 6 },
   stepLineActive: { backgroundColor: COLORS.primary },

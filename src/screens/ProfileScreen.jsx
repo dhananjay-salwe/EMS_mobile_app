@@ -12,6 +12,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   Modal,
+  useWindowDimensions,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import * as ImageManipulator from 'expo-image-manipulator';
@@ -347,17 +348,25 @@ export default function ProfileScreen({ operator, selectedBooth, onUpdateOperato
     );
   };
 
+  const { width: windowWidth } = useWindowDimensions();
+  const isTablet = windowWidth >= 768;
+  const isSmallScreen = windowWidth < 360;
+
   const initial = (fullName || operator?.username || '?').charAt(0).toUpperCase();
   const displayImageUri = pendingLocalImageUri || currentPictureUrl;
   const terminalAuthId = operator?.id ? `#${String(operator.id).padStart(3, '0')}` : '#042';
 
   return (
     <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
       style={{ flex: 1, backgroundColor: '#f8fafc' }}
     >
       <ScrollView
-        contentContainerStyle={styles.scrollContainer}
+        contentContainerStyle={[
+          styles.scrollContainer,
+          isTablet && styles.scrollContainerTablet,
+        ]}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
@@ -622,8 +631,14 @@ const styles = StyleSheet.create({
   scrollContainer: {
     paddingHorizontal: 16,
     paddingTop: 14,
-    paddingBottom: 28,
+    paddingBottom: 36,
     backgroundColor: '#f8fafc',
+    width: '100%',
+  },
+  scrollContainerTablet: {
+    maxWidth: 640,
+    alignSelf: 'center',
+    paddingHorizontal: 24,
   },
   navBar: {
     flexDirection: 'row',
@@ -758,7 +773,9 @@ const styles = StyleSheet.create({
   avatarActions: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     gap: 8,
+    flexWrap: 'wrap',
     marginTop: 4,
   },
   choosePhotoBtn: {
@@ -816,6 +833,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    flexWrap: 'wrap',
+    rowGap: 6,
     borderBottomWidth: 1,
     borderBottomColor: '#f1f5f9',
     paddingBottom: 10,
