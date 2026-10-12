@@ -333,7 +333,7 @@ export default function ProfileScreen({ operator, selectedBooth, onUpdateOperato
                 if (onUpdateOperator) {
                   onUpdateOperator({ profile_picture: null, profile_picture_url: null, avatar_url: null });
                 }
-                Alert.alert('Success', 'Profile picture removed.');
+                // Alert.alert('Success', 'Profile picture removed.');
               } else {
                 Alert.alert('Error', res.message || 'Could not remove profile picture.');
               }
@@ -442,7 +442,7 @@ export default function ProfileScreen({ operator, selectedBooth, onUpdateOperato
           </View>
 
           <Text style={styles.avatarHintText}>
-            Official INEC / EMS ID standard (PNG, JPG • Max 5MB)
+             PNG, JPG • Max 2MB
           </Text>
         </View>
 
@@ -554,13 +554,13 @@ export default function ProfileScreen({ operator, selectedBooth, onUpdateOperato
         </View>
 
         {/* Cryptographic Signature Security Notice */}
-        <View style={styles.securityNotice}>
+        {/* <View style={styles.securityNotice}>
           <ShieldIcon size={16} color="#1d4ed8" />
           <Text style={styles.securityNoticeText}>
             <Text style={styles.securityNoticeBold}>Cryptographic Signature Active: </Text>
             Any profile metadata changes are synchronized with the central state collation database.
           </Text>
-        </View>
+        </View> */}
 
         {/* Terminal Sign Out Section */}
         <View style={styles.signOutSection}>
@@ -572,9 +572,9 @@ export default function ProfileScreen({ operator, selectedBooth, onUpdateOperato
             <LogoutIcon size={14} color="#dc2626" />
             <Text style={styles.signOutBtnText}>Sign Out</Text>
           </TouchableOpacity>
-          <Text style={styles.signOutHintText}>
+          {/* <Text style={styles.signOutHintText}>
             Requires booth supervisor authorization to re-assign hardware key
-          </Text>
+          </Text> */}
         </View>
 
         {/* Persistent Supervisor Support Bar */}
@@ -582,11 +582,12 @@ export default function ProfileScreen({ operator, selectedBooth, onUpdateOperato
           style={styles.supportFooter}
           activeOpacity={0.7}
           onPress={() =>
-            Alert.alert('Supervisor Support', 'Please contact your Polling Unit Supervisor at the operations desk.')
+            Alert.alert('Administrator Support',
+                'Please contact Administrator.')
           }
         >
           <SupportIcon size={15} color="#1d4ed8" />
-          <Text style={styles.supportFooterText}>Need help? Contact Polling Unit Supervisor</Text>
+          <Text style={styles.supportFooterText}>Need help? Contact Administrator</Text>
         </TouchableOpacity>
       </ScrollView>
 

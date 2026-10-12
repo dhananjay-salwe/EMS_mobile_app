@@ -234,7 +234,7 @@ export default function LoginScreen({ onLoginSuccess }) {
 
       onLoginSuccess(operatorData);
     } else {
-      Alert.alert('Login Failed', data.message || 'Invalid credentials');
+      Alert.alert('Invalid Credentials', data.message);
     }
   };
 
@@ -270,7 +270,7 @@ export default function LoginScreen({ onLoginSuccess }) {
             <View style={styles.banner}>
               <View style={styles.bannerGlow} />
               <Text style={styles.bannerTitle}>Welcome to EMS</Text>
-              <Text style={styles.bannerSubtitle}>Authorized Booth Officer Login</Text>
+              <Text style={styles.bannerSubtitle}>Authorized Login</Text>
             </View>
 
             {/* Overlapping Officer Crest Token with EMS Ballot Logo */}
@@ -343,8 +343,8 @@ export default function LoginScreen({ onLoginSuccess }) {
                     activeOpacity={0.7}
                     onPress={() =>
                       Alert.alert(
-                        'Reset Key',
-                        'Please contact your Polling Unit Supervisor to reset your security key.'
+                        'Reset Password',
+                        'Please contact Administrator to reset your password.'
                       )
                     }
                   >
@@ -390,7 +390,7 @@ export default function LoginScreen({ onLoginSuccess }) {
                   </View>
                 ) : (
                   <View style={styles.btnContent}>
-                    <Text style={styles.loginBtnText}>Login to Booth Terminal</Text>
+                    <Text style={styles.loginBtnText}>Login</Text>
                     <ArrowRightIcon />
                   </View>
                 )}
@@ -409,14 +409,14 @@ export default function LoginScreen({ onLoginSuccess }) {
             activeOpacity={0.7}
             onPress={() =>
               Alert.alert(
-                'Supervisor Support',
-                'Please contact your Polling Unit Supervisor at the designated operations desk.'
+                'Administrator Support',
+                'Please contact Administrator.'
               )
             }
           >
             <SupportIcon color="#1e40af" />
             <Text style={styles.supportLinkText}>
-              Need help? Contact Polling Unit Supervisor
+              Need help? Contact Administrator
             </Text>
           </TouchableOpacity>
         </ScrollView>

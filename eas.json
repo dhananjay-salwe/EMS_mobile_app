@@ -10,11 +10,33 @@
     "preview": {
       "android": {
         "buildType": "apk"
+      },
+      "cache": {
+        "key": "voting-app-gradle-cache",
+        "paths": [
+          "~/.gradle/caches",
+          "~/.gradle/wrapper",
+          ".m2/repository"
+        ]
+      },
+      "env": {
+        "GRADLE_OPTS": "-Dorg.gradle.daemon=false -Dorg.gradle.parallel=true -Dorg.gradle.caching=true -Dorg.gradle.jvmargs=\"-Xmx4096m -XX:MaxMetaspaceSize=1024m\""
       }
     },
     "production": {
       "android": {
         "buildType": "apk"
+      },
+      "cache": {
+        "key": "voting-app-gradle-cache",
+        "paths": [
+          "~/.gradle/caches",
+          "~/.gradle/wrapper",
+          ".m2/repository"
+        ]
+      },
+      "env": {
+        "GRADLE_OPTS": "-Dorg.gradle.daemon=false -Dorg.gradle.parallel=true -Dorg.gradle.caching=true -Dorg.gradle.jvmargs=\"-Xmx4096m -XX:MaxMetaspaceSize=1024m\""
       }
     }
   },

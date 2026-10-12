@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, SafeAreaView, Platform, StatusBar } from 'react-native';
+import { StyleSheet, SafeAreaView, Platform, StatusBar, ActivityIndicator, View } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import Header from './src/components/Header';
 import LoginScreen from './src/screens/LoginScreen';
 import LocationSelectScreen from './src/screens/LocationSelectScreen';
@@ -8,89 +9,132 @@ import ProfileScreen from './src/screens/ProfileScreen';
 import { COLORS } from './src/theme';
 import { setAuthToken } from './src/api/client';
 
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import WalkthroughScreen from './src/screens/WalkthroughScreen';
-
-const DEV_FORCE_WALKTHROUGH = true;
 
 export default function App() {
   const [operator, setOperator] = useState(null);
   const [selectedBooth, setSelectedBooth] = useState(null);
   const [showProfile, setShowProfile] = useState(false);
+  const [showWalkthrough, setShowWalkthrough] = useState(true);
+  const [isInitializing, setIsInitializing] = useState(true);
 
-  const [isFirstLaunch, setIsFirstLaunch] = useState(null);
-
-  // useEffect(() => {
-  //   const checkFirstLaunch = async () => {
-  //     try {
-  //       const value = await AsyncStorage.getItem('hasSeenWalkthrough');
-  //       setIsFirstLaunch(value === null);
-  //     } catch (e) {
-  //       setIsFirstLaunch(false);
-  //     }
-  //   };
-  //   checkFirstLaunch();
-  // }, []);
+  // Restore authenticated session from AsyncStorage on app launch
   useEffect(() => {
-    const checkFirstLaunch = async () => {
+    const restoreSession = async () => {
       try {
-        if (__DEV__ && DEV_FORCE_WALKTHROUGH) {
-          // Clears the saved flag so you can test fresh every time
-          await AsyncStorage.removeItem('hasSeenWalkthrough');
-          setIsFirstLaunch(true);
-          return;
-        }
+        const storedToken = await AsyncStorage.getItem('auth_token');
+        const storedOperator = await AsyncStorage.getItem('auth_operator');
+        const storedBooth = await AsyncStorage.getItem('auth_booth');
 
-        const value = await AsyncStorage.getItem('hasSeenWalkthrough');
-        setIsFirstLaunch(value === null);
-      } catch (e) {
-        setIsFirstLaunch(false);
+        if (storedToken && storedOperator) {
+          await setAuthToken(storedToken);
+          const parsedOperator = JSON.parse(storedOperator);
+          setOperator(parsedOperator);
+
+          if (storedBooth) {
+            setSelectedBooth(JSON.parse(storedBooth));
+          } else if (parsedOperator.assigned_booth_id) {
+            setSelectedBooth({
+              booth_id: parsedOperator.assigned_booth_id,
+              unique_booth_code: parsedOperator.unique_booth_code,
+              booth_name: parsedOperator.booth_name,
+            });
+          }
+          // Logged-in user: do not show walkthrough
+          setShowWalkthrough(false);
+        } else {
+          // Logged-out user: show walkthrough
+          setShowWalkthrough(true);
+        }
+      } catch (err) {
+        console.error('Failed to restore auth session:', err);
+      } finally {
+        setIsInitializing(false);
       }
     };
-    checkFirstLaunch();
+
+    restoreSession();
   }, []);
 
-  const handleLogout = () => {
-    setAuthToken(null);
+  const handleLogout = async () => {
+    await setAuthToken(null);
+    try {
+      await AsyncStorage.multiRemove(['auth_token', 'auth_operator', 'auth_booth']);
+    } catch (err) {
+      console.error('Failed to clear stored session:', err);
+    }
     setOperator(null);
     setSelectedBooth(null);
     setShowProfile(false);
+    setShowWalkthrough(true);
   };
 
-  const handleLoginSuccess = (opData) => {
+  const handleLoginSuccess = async (opData) => {
     setOperator(opData);
-    // If the backend returns an assigned booth, auto-select it to bypass the location screen!
+    setShowWalkthrough(false);
+    try {
+      await AsyncStorage.setItem('auth_operator', JSON.stringify(opData));
+    } catch (err) {
+      console.error('Failed to persist operator data:', err);
+    }
+
     if (opData.assigned_booth_id) {
-      setSelectedBooth({
+      const booth = {
         booth_id: opData.assigned_booth_id,
         unique_booth_code: opData.unique_booth_code,
-        booth_name: opData.booth_name
-      });
+        booth_name: opData.booth_name,
+      };
+      setSelectedBooth(booth);
+      try {
+        await AsyncStorage.setItem('auth_booth', JSON.stringify(booth));
+      } catch (err) {
+        console.error('Failed to persist booth data:', err);
+      }
     }
   };
 
-  const handleUpdateOperator = (updatedFields) => {
-    setOperator((prev) => ({ ...prev, ...updatedFields }));
+  const handleBoothSelected = async (booth) => {
+    setSelectedBooth(booth);
+    try {
+      if (booth) {
+        await AsyncStorage.setItem('auth_booth', JSON.stringify(booth));
+      } else {
+        await AsyncStorage.removeItem('auth_booth');
+      }
+    } catch (err) {
+      console.error('Failed to update stored booth:', err);
+    }
   };
 
-  // While reading storage, return null or a simple ActivityIndicator
-  if (isFirstLaunch === null) {
-    return null;
+  const handleUpdateOperator = async (updatedFields) => {
+    setOperator((prev) => {
+      const updated = { ...prev, ...updatedFields };
+      AsyncStorage.setItem('auth_operator', JSON.stringify(updated)).catch((err) =>
+        console.error('Failed to update stored operator:', err)
+      );
+      return updated;
+    });
+  };
+
+  if (isInitializing) {
+    return (
+      <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
+        <ActivityIndicator size="large" color={COLORS.primary || '#1e40af'} />
+      </View>
+    );
   }
 
-  // If first launch, show WalkthroughScreen
-  if (isFirstLaunch) {
-    return <WalkthroughScreen onDone={() => setIsFirstLaunch(false)} />;
+  // 1. Show Walkthrough Screen if user is logged out
+  if (!operator && showWalkthrough) {
+    return <WalkthroughScreen onDone={() => setShowWalkthrough(false)} />;
   }
 
-  // Existing logic continues below (operator === null ? <LoginScreen /> : ...)
-
-  // 1. Show Login Screen if unauthenticated
+  // 2. Show Login Screen if unauthenticated
   if (!operator) {
     return <LoginScreen onLoginSuccess={handleLoginSuccess} />;
   }
 
-  // 2. Main App Container
+  // 3. Main App Container
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor={COLORS.card} />
@@ -102,10 +146,10 @@ export default function App() {
         // Only allow changing booths if they are NOT strictly assigned to one
         onChangeBooth={!operator.assigned_booth_id ? () => {
           setShowProfile(false);
-          setSelectedBooth(null);
+          handleBoothSelected(null);
         } : undefined}
       />
-      {/* 3. Conditional Screen Display */}
+      {/* Conditional Screen Display */}
       {showProfile ? (
         <ProfileScreen
           operator={operator}
@@ -115,7 +159,7 @@ export default function App() {
           onLogout={handleLogout}
         />
       ) : !selectedBooth ? (
-        <LocationSelectScreen onBoothSelected={setSelectedBooth} />
+        <LocationSelectScreen onBoothSelected={handleBoothSelected} />
       ) : (
         <VoteSubmissionScreen operator={operator} selectedBooth={selectedBooth} />
       )}

@@ -1,0 +1,8 @@
+.git/
+node_modules/
+apk/
+scratch/
+backup/
+oldApp.js
+assets/ios/
+assets/android/mipmap-*/

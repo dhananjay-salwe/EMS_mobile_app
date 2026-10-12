@@ -12,11 +12,13 @@ import {
   ActivityIndicator,
   StyleSheet,
   useWindowDimensions,
+  Modal,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import * as ImageManipulator from 'expo-image-manipulator';
-import { Video, ResizeMode } from 'expo-av';
-import { apiCall } from '../api/client';
+import { Video } from 'react-native-compressor';
+import { activateKeepAwakeAsync, deactivateKeepAwake } from 'expo-keep-awake';
+import { apiCall, uploadWithProgress } from '../api/client';
 import { COLORS, RADIUS, SPACING, FONTS } from '../theme';
 
 // --- Pure React Native Vector Icons (Zero Font Dependencies, Crash-Proof) ---
@@ -72,6 +74,52 @@ const VideoIcon = ({ size = 18, color = '#444653' }) => {
           borderBottomColor: 'transparent',
           borderLeftColor: color,
           marginLeft: 2,
+        }}
+      />
+    </View>
+  );
+};
+
+const GalleryIcon = ({ size = 20, color = '#1e40af' }) => {
+  const stroke = 2;
+  return (
+    <View
+      style={{
+        width: size + 2,
+        height: size,
+        borderWidth: stroke,
+        borderColor: color,
+        borderRadius: 4,
+        alignItems: 'center',
+        justifyContent: 'center',
+        overflow: 'hidden',
+        position: 'relative',
+      }}
+    >
+      <View
+        style={{
+          width: size * 0.28,
+          height: size * 0.28,
+          borderRadius: (size * 0.28) / 2,
+          backgroundColor: color,
+          position: 'absolute',
+          top: 2,
+          right: 2.5,
+        }}
+      />
+      <View
+        style={{
+          width: 0,
+          height: 0,
+          borderLeftWidth: size * 0.35,
+          borderRightWidth: size * 0.35,
+          borderBottomWidth: size * 0.45,
+          borderLeftColor: 'transparent',
+          borderRightColor: 'transparent',
+          borderBottomColor: color,
+          position: 'absolute',
+          bottom: 0,
+          left: 1,
         }}
       />
     </View>
@@ -208,14 +256,18 @@ export default function VoteSubmissionScreen({ operator, selectedBooth }) {
   // ✅ Preserved candidates and votes state:
   const [candidates, setCandidates] = useState([]);
   const [votes, setVotes] = useState({});
-  // ✅ Task 3: Separate states for Photo 1, Photo 2, and Video
   const [photo1Uri, setPhoto1Uri] = useState(null);
   const [photo2Uri, setPhoto2Uri] = useState(null);
   const [videoUri, setVideoUri] = useState(null);
+  const [videoDuration, setVideoDuration] = useState(null);
   const [photo1Aspect, setPhoto1Aspect] = useState(null);
   const [photo2Aspect, setPhoto2Aspect] = useState(null);
   const [submitting, setSubmitting] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [compressingVideo, setCompressingVideo] = useState(false);
+  const [compressionProgress, setCompressionProgress] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [captureTarget, setCaptureTarget] = useState(null); // 'photo1' | 'photo2' | 'video'
 
   useEffect(() => {
     fetchCandidates();
@@ -297,106 +349,198 @@ export default function VoteSubmissionScreen({ operator, selectedBooth }) {
     }
   };
 
-  const pickPhoto = async (photoNumber) => {
-    const { status } = await ImagePicker.requestCameraPermissionsAsync();
-    if (status !== "granted") {
+  const processAndCompressVideo = async (asset) => {
+    if (!asset || !asset.uri) return;
+
+    // Expo ImagePicker provides duration in milliseconds for videos.
+    // If duration > 1000, convert to seconds. If already in seconds, use directly.
+    const durationSeconds =
+      typeof asset.duration === 'number'
+        ? (asset.duration > 1000 ? asset.duration / 1000 : asset.duration)
+        : null;
+
+    if (durationSeconds !== null && durationSeconds > 180) {
       Alert.alert(
-        "Permission Denied",
-        "Camera access is required to capture the tally sheet.",
+        "Video Limit Exceeded",
+        "Please select a video with a maximum duration of 3 minutes."
       );
       return;
     }
 
-    let result = await ImagePicker.launchCameraAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      quality: 0.8,
-    });
+    setCompressingVideo(true);
+    setCompressionProgress(0);
 
-    if (!result.canceled && result.assets && result.assets.length > 0) {
-      await compressAndSetPhoto(result.assets[0].uri, photoNumber);
+    try {
+      console.log('Starting video compression for:', asset.uri);
+      // Aggressively compress video down to 720p / 1.5Mbps (e.g. 400MB down to ~20MB)
+      const compressedUri = await Video.compress(
+        asset.uri,
+        {
+          compressionMethod: 'auto',
+          maxSize: 720,
+          bitrate: 1500000,
+        },
+        (progress) => {
+          setCompressionProgress(Math.round(progress * 100));
+        }
+      );
+
+      console.log('Video compression complete:', compressedUri);
+      setVideoDuration(durationSeconds);
+      setVideoUri(compressedUri);
+    } catch (err) {
+      console.warn("Video compression fallback to original URI:", err);
+      setVideoDuration(durationSeconds);
+      setVideoUri(asset.uri);
+    } finally {
+      setCompressingVideo(false);
+      setCompressionProgress(0);
     }
   };
 
-  const recordVideo = async () => {
-    const { status } = await ImagePicker.requestCameraPermissionsAsync();
-    if (status !== "granted") {
-      Alert.alert(
-        "Permission Denied",
-        "Camera access is required to record the tally video.",
-      );
-      return;
-    }
+  const handleCaptureOption = async (source) => {
+    const target = captureTarget;
+    setCaptureTarget(null);
 
-    const result = await ImagePicker.launchCameraAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Videos,
-      allowsEditing: false,
-      quality: 0.5,
-      videoMaxDuration: 30,
-    });
+    if (source === 'camera') {
+      const { status } = await ImagePicker.requestCameraPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert(
+          'Permission Denied',
+          'Camera access is required to capture media.'
+        );
+        return;
+      }
 
-    if (!result.canceled && result.assets && result.assets.length > 0) {
-      setVideoUri(result.assets[0].uri);
+      if (target === 'video') {
+        const result = await ImagePicker.launchCameraAsync({
+          mediaTypes: ImagePicker.MediaTypeOptions.Videos,
+          allowsEditing: false,
+          quality: 0.5,
+          videoMaxDuration: 180, // Max video duration 3 minutes
+          videoExportPreset: ImagePicker.VideoExportPreset.H264_1280x720,
+          videoQuality: 0,
+        });
+
+        if (!result.canceled && result.assets && result.assets.length > 0) {
+          await processAndCompressVideo(result.assets[0]);
+        }
+      } else {
+        const result = await ImagePicker.launchCameraAsync({
+          mediaTypes: ImagePicker.MediaTypeOptions.Images, // Photos only
+          quality: 0.8,
+        });
+
+        if (!result.canceled && result.assets && result.assets.length > 0) {
+          await compressAndSetPhoto(result.assets[0].uri, target === 'photo2' ? 2 : 1);
+        }
+      }
+    } else {
+      // File Browser / Gallery
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert(
+          'Permission Denied',
+          'Gallery access is required to select files.'
+        );
+        return;
+      }
+
+      if (target === 'video') {
+        const result = await ImagePicker.launchImageLibraryAsync({
+          mediaTypes: ImagePicker.MediaTypeOptions.Videos, // Strictly videos only!
+          allowsEditing: false,
+          quality: 0.5,
+          videoExportPreset: ImagePicker.VideoExportPreset.H264_1280x720,
+        });
+
+        if (!result.canceled && result.assets && result.assets.length > 0) {
+          await processAndCompressVideo(result.assets[0]);
+        }
+      } else {
+        const result = await ImagePicker.launchImageLibraryAsync({
+          mediaTypes: ImagePicker.MediaTypeOptions.Images, // Strictly photos only!
+          allowsEditing: false,
+          quality: 0.8,
+        });
+
+        if (!result.canceled && result.assets && result.assets.length > 0) {
+          await compressAndSetPhoto(result.assets[0].uri, target === 'photo2' ? 2 : 1);
+        }
+      }
     }
   };
 
   const submitData = async () => {
-    // Validation
-    const votePayload = {};
-    for (const c of candidates) {
-      const count = parseInt(votes[c.candidate_id], 10);
-      if (isNaN(count)) {
-        Alert.alert(
-          "Validation Error",
-          `Please enter valid vote counts for ${c.candidate_name}.`,
-        );
-        return;
-      }
-      votePayload[c.candidate_id] = count;
+    // 2 photos are strictly mandatory; video is optional
+    if (!photo1Uri || !photo2Uri) {
+      Alert.alert(
+        "Missing Required Photos",
+        "Both Tally Sheet Photo 1 and Photo 2 are required before submitting.",
+      );
+      return;
     }
 
-    // Task 4: Strict validation logic checking all 3 media items
-    if (!photo1Uri || !photo2Uri || !videoUri) {
+    if (videoUri && videoDuration && videoDuration > 180) {
       Alert.alert(
-        "Missing Required Media",
-        "All 3 media attachments (Image 1, Image 2, and Video) are strictly required before submitting.",
+        "Video Limit Exceeded",
+        "Please attach video under 3 minute only!"
       );
       return;
     }
 
     setSubmitting(true);
+    setUploadProgress(0);
+
+    // Keep mobile screen on during heavy file uploads
+    try {
+      await activateKeepAwakeAsync();
+    } catch (wakeErr) {
+      console.warn("Could not activate keep-awake:", wakeErr);
+    }
 
     try {
       const formData = new FormData();
-      formData.append("operator_id", operator.id);
-      formData.append("booth_id", selectedBooth.booth_id);
-      formData.append("votes", JSON.stringify(votePayload));
+      formData.append("operator_id", String(operator.id));
+      formData.append("booth_id", String(selectedBooth.booth_id));
+      formData.append("votes", "{}");
 
       formData.append("tally_sheet", {
-        uri: photo1Uri,
+        uri: Platform.OS === 'android' ? photo1Uri : photo1Uri.replace('file://', ''),
         name: `tally_1_${selectedBooth.booth_id}_${Date.now()}.jpg`,
         type: "image/jpeg",
       });
 
       formData.append("tally_sheet_2", {
-        uri: photo2Uri,
+        uri: Platform.OS === 'android' ? photo2Uri : photo2Uri.replace('file://', ''),
         name: `tally_2_${selectedBooth.booth_id}_${Date.now()}.jpg`,
         type: "image/jpeg",
       });
 
       if (videoUri) {
+        const uriParts = videoUri.split('.');
+        const fileExt = uriParts[uriParts.length - 1] || 'mp4';
+        const isQuickTime = fileExt.toLowerCase() === 'mov';
+
         formData.append("tally_video", {
-          uri: videoUri,
-          name: "tally_video.mp4",
-          type: "video/mp4",
+          uri: Platform.OS === 'android' ? videoUri : videoUri.replace('file://', ''),
+          name: `tally_video_${selectedBooth.booth_id}_${Date.now()}.${isQuickTime ? 'mov' : 'mp4'}`,
+          type: isQuickTime ? 'video/quicktime' : 'video/mp4',
         });
       }
 
-      const data = await apiCall("/votes/submit-votes", "POST", formData, true);
+      const data = await uploadWithProgress(
+        "/votes/submit-votes",
+        formData,
+        (progress) => {
+          setUploadProgress(progress);
+        }
+      );
 
       if (data.success) {
         Alert.alert(
-          "Success!",
-          "Polling record uploaded successfully!",
+          "Upload Successful!",
+          "Your photo/video evidance have been uploaded successfully.",
         );
 
         // Reset form for potential re-submission
@@ -408,29 +552,34 @@ export default function VoteSubmissionScreen({ operator, selectedBooth }) {
         setPhoto1Uri(null);
         setPhoto2Uri(null);
         setVideoUri(null);
+        setVideoDuration(null);
         setPhoto1Aspect(null);
         setPhoto2Aspect(null);
       } else {
         Alert.alert("Submission Failed", data.message || "Error saving votes");
       }
     } catch (err) {
-      Alert.alert("Error", "Network request failed.");
+      Alert.alert("Error", "Network request failed: " + (err.message || "Unknown error"));
     } finally {
+      try {
+        deactivateKeepAwake();
+      } catch (_) {}
       setSubmitting(false);
+      setUploadProgress(0);
     }
   };
 
-  if (loading) {
-    return (
-      <View style={styles.center}>
-        <ActivityIndicator size="large" color="#1e40af" />
-        <Text style={styles.loadingText}>Loading ward candidates…</Text>
-      </View>
-    );
-  }
+  // if (loading) {
+  //   return (
+  //     <View style={styles.center}>
+  //       <ActivityIndicator size="large" color="#1e40af" />
+  //       <Text style={styles.loadingText}>Loading ward candidates…</Text>
+  //     </View>
+  //   );
+  // }
 
-  const attachedCount = (photo1Uri ? 1 : 0) + (photo2Uri ? 1 : 0) + (videoUri ? 1 : 0);
-  const isSubmissionReady = Boolean(photo1Uri && photo2Uri && videoUri);
+  const attachedPhotosCount = (photo1Uri ? 1 : 0) + (photo2Uri ? 1 : 0);
+  const isSubmissionReady = Boolean(photo1Uri && photo2Uri);
 
   return (
     <KeyboardAvoidingView
@@ -438,7 +587,8 @@ export default function VoteSubmissionScreen({ operator, selectedBooth }) {
       style={styles.screen}
     >
       <FlatList
-        data={candidates}
+        // data={candidates}
+        data={[]}
         keyExtractor={(item) => item.candidate_id.toString()}
         contentContainerStyle={[
           styles.listContent,
@@ -446,110 +596,40 @@ export default function VoteSubmissionScreen({ operator, selectedBooth }) {
         ]}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
-        ListHeaderComponent={
-          <View style={styles.headerSection}>
-            <Text style={styles.sectionTitle}>CANDIDATE RETURNS</Text>
-            <Text style={styles.sectionSubtitle}>Tap +/- or input value</Text>
-          </View>
-        }
-        renderItem={({ item }) => {
-          const initial = item.party_name ? item.party_name.charAt(0).toUpperCase() : 'A';
-          return (
-            <View style={styles.candidateCard}>
-              <View style={styles.candidateLeft}>
-                {item.party_icon_url ? (
-                  <Image
-                    source={{ uri: item.party_icon_url }}
-                    style={styles.partyIcon}
-                  />
-                ) : (
-                  <View style={styles.partyAvatar}>
-                    <Text style={styles.partyAvatarText}>{initial}</Text>
-                  </View>
-                )}
-                <View style={styles.candidateDetails}>
-                  <Text style={styles.candidateName} numberOfLines={1}>
-                    {item.candidate_name}
-                  </Text>
-                  <Text style={styles.partyName} numberOfLines={1}>
-                    {item.party_name} {item.party_code ? `(${item.party_code})` : ''}
-                  </Text>
-                </View>
-              </View>
-
-              {/* Numeric Tally Stepper & Input Well */}
-              <View style={styles.stepperContainer}>
-                <TouchableOpacity
-                  style={styles.stepperBtn}
-                  onPress={() => adjustVote(item.candidate_id, -1)}
-                  activeOpacity={0.7}
-                  hitSlop={{ top: 8, bottom: 8, left: 6, right: 6 }}
-                >
-                  <Text style={styles.stepperBtnText}>−</Text>
-                </TouchableOpacity>
-
-                <TextInput
-                  style={styles.voteInput}
-                  keyboardType="numeric"
-                  placeholder="0"
-                  placeholderTextColor="#94a3b8"
-                  value={
-                    votes[item.candidate_id] !== undefined
-                      ? votes[item.candidate_id].toString()
-                      : ""
-                  }
-                  onChangeText={(text) => updateVote(item.candidate_id, text)}
-                />
-
-                <TouchableOpacity
-                  style={styles.stepperBtn}
-                  onPress={() => adjustVote(item.candidate_id, 1)}
-                  activeOpacity={0.7}
-                  hitSlop={{ top: 8, bottom: 8, left: 6, right: 6 }}
-                >
-                  <Text style={styles.stepperBtnText}>+</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-          );
-        }}
+        ListHeaderComponent={null}
+        renderItem={() => null}
         ListFooterComponent={
           <View style={styles.footer}>
-            {/* Booth Media & Form EC8A Section Header */}
+            {/* Booth Media Section Header */}
             <View style={styles.mediaHeaderRow}>
               <View style={styles.mediaTitleLeft}>
-                <Text style={styles.mediaSectionTitle}>BOOTH MEDIA & EVIDENCE</Text>
+                <Text style={styles.mediaSectionTitle}>UPLOAD MEDIA & EVIDENCE</Text>
                 <View style={styles.mandatoryBadge}>
-                  <Text style={styles.mandatoryBadgeText}>All 3 Mandatory</Text>
+                  <Text style={styles.mandatoryBadgeText}>2 Photos Mandatory</Text>
                 </View>
               </View>
-              <Text style={styles.attachedCountText}>{attachedCount} of 3 attached</Text>
+              <Text style={styles.attachedCountText}>
+                {attachedPhotosCount} of 2 photos attached{videoUri ? ' • Video added' : ''}
+              </Text>
             </View>
 
-            {/* Media Upload Cards */}
+            {/* Media Upload Cards: Only 3 Cards (Photo 1, Photo 2, Video) */}
             <View style={styles.mediaStack}>
               {/* 1. Photo 1 Card */}
               {!photo1Uri ? (
                 <TouchableOpacity
-                  style={[
-                    styles.mediaCard,
-                    isTablet && styles.mediaCardTablet,
-                    isSmallScreen && styles.mediaCardSmall,
-                  ]}
-                  onPress={() => pickPhoto(1)}
+                  style={styles.mediaCard}
+                  onPress={() => setCaptureTarget('photo1')}
                   activeOpacity={0.7}
                 >
                   <View style={styles.iconCircle}>
-                    <CameraIcon size={26} color="#2563EB" />
+                    <CameraIcon size={28} color="#2563EB" />
                   </View>
-                  <Text style={styles.emptyCardText} numberOfLines={2}>Take a Photo</Text>
+                  <Text style={styles.emptyCardText}>Take a Photo</Text>
+                  {/* <Text style={styles.emptyCardSubtext}>Tally Sheet - Photo 1 (Mandatory)</Text> */}
                 </TouchableOpacity>
               ) : (
-                <View style={[
-                  styles.mediaCard,
-                  isTablet && styles.mediaCardTablet,
-                  isSmallScreen && styles.mediaCardSmall,
-                ]}>
+                <View style={styles.mediaCard}>
                   <Image
                     source={{ uri: photo1Uri }}
                     style={[
@@ -564,39 +644,41 @@ export default function VoteSubmissionScreen({ operator, selectedBooth }) {
                       }
                     }}
                   />
-                  <TouchableOpacity
-                    style={styles.retakeBtn}
-                    onPress={() => pickPhoto(1)}
-                    activeOpacity={0.7}
-                  >
-                    <CameraIcon size={16} color="#2563EB" />
-                    <Text style={styles.retakeBtnText}>Retake</Text>
-                  </TouchableOpacity>
+                  <View style={styles.mediaCardActions}>
+                    <TouchableOpacity
+                      style={styles.retakeBtn}
+                      onPress={() => setCaptureTarget('photo1')}
+                      activeOpacity={0.7}
+                    >
+                      <CameraIcon size={16} color="#2563EB" />
+                      <Text style={styles.retakeBtnText}>Retake Photo 1</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={styles.removeMediaBtn}
+                      onPress={() => setPhoto1Uri(null)}
+                      activeOpacity={0.7}
+                    >
+                      <Text style={styles.removeMediaBtnText}>Remove</Text>
+                    </TouchableOpacity>
+                  </View>
                 </View>
               )}
 
               {/* 2. Photo 2 Card */}
               {!photo2Uri ? (
                 <TouchableOpacity
-                  style={[
-                    styles.mediaCard,
-                    isTablet && styles.mediaCardTablet,
-                    isSmallScreen && styles.mediaCardSmall,
-                  ]}
-                  onPress={() => pickPhoto(2)}
+                  style={styles.mediaCard}
+                  onPress={() => setCaptureTarget('photo2')}
                   activeOpacity={0.7}
                 >
                   <View style={styles.iconCircle}>
-                    <CameraIcon size={26} color="#2563EB" />
+                    <CameraIcon size={28} color="#2563EB" />
                   </View>
-                  <Text style={styles.emptyCardText} numberOfLines={2}>Take a Photo</Text>
+                  <Text style={styles.emptyCardText}>Take a Photo</Text>
+                  {/* <Text style={styles.emptyCardSubtext}>Tally Sheet - Photo 2 (Mandatory)</Text> */}
                 </TouchableOpacity>
               ) : (
-                <View style={[
-                  styles.mediaCard,
-                  isTablet && styles.mediaCardTablet,
-                  isSmallScreen && styles.mediaCardSmall,
-                ]}>
+                <View style={styles.mediaCard}>
                   <Image
                     source={{ uri: photo2Uri }}
                     style={[
@@ -611,70 +693,81 @@ export default function VoteSubmissionScreen({ operator, selectedBooth }) {
                       }
                     }}
                   />
-                  <TouchableOpacity
-                    style={styles.retakeBtn}
-                    onPress={() => pickPhoto(2)}
-                    activeOpacity={0.7}
-                  >
-                    <CameraIcon size={16} color="#2563EB" />
-                    <Text style={styles.retakeBtnText}>Retake</Text>
-                  </TouchableOpacity>
+                  <View style={styles.mediaCardActions}>
+                    <TouchableOpacity
+                      style={styles.retakeBtn}
+                      onPress={() => setCaptureTarget('photo2')}
+                      activeOpacity={0.7}
+                    >
+                      <CameraIcon size={16} color="#2563EB" />
+                      <Text style={styles.retakeBtnText}>Retake Photo 2</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={styles.removeMediaBtn}
+                      onPress={() => setPhoto2Uri(null)}
+                      activeOpacity={0.7}
+                    >
+                      <Text style={styles.removeMediaBtnText}>Remove</Text>
+                    </TouchableOpacity>
+                  </View>
                 </View>
               )}
 
-              {/* 3. Video Card */}
+              {/* 3. Video Card (Optional, Max 3 min) */}
               {!videoUri ? (
                 <TouchableOpacity
-                  style={[
-                    styles.mediaCard,
-                    isTablet && styles.mediaCardTablet,
-                    isSmallScreen && styles.mediaCardSmall,
-                  ]}
-                  onPress={recordVideo}
+                  style={styles.mediaCard}
+                  onPress={() => setCaptureTarget('video')}
                   activeOpacity={0.7}
                 >
                   <View style={styles.iconCircle}>
-                    <VideoIcon size={26} color="#2563EB" />
+                    <VideoIcon size={28} color="#2563EB" />
                   </View>
-                  <Text style={styles.emptyCardText} numberOfLines={2}>Record video</Text>
+                  <Text style={styles.emptyCardText}>Record video</Text>
+                  <Text style={styles.emptyCardSubtext}> Max 3 min</Text>
                 </TouchableOpacity>
               ) : (
-                <View style={[
-                  styles.mediaCard,
-                  isTablet && styles.mediaCardTablet,
-                  isSmallScreen && styles.mediaCardSmall,
-                ]}>
-                  <Video
-                    source={{ uri: videoUri }}
-                    style={[
-                      styles.videoPreview,
-                      isTablet && { height: 320 },
-                    ]}
-                    useNativeControls={true}
-                    resizeMode={ResizeMode.CONTAIN}
-                    isLooping={false}
-                  />
-                  <TouchableOpacity
-                    style={styles.retakeBtn}
-                    onPress={recordVideo}
-                    activeOpacity={0.7}
-                  >
-                    <CameraIcon size={16} color="#2563EB" />
-                    <Text style={styles.retakeBtnText}>Re-record</Text>
-                  </TouchableOpacity>
+                <View style={[styles.mediaCard, styles.mediaCardSuccess]}>
+                  <View style={styles.videoSuccessBadge}>
+                    <View style={styles.videoPlayCircle}>
+                      <VideoIcon size={24} color="#16a34a" />
+                    </View>
+                    <Text style={styles.videoSuccessTitle}>Video Attached Successfully</Text>
+                    {/* <Text style={styles.videoSuccessSubtitle}>Ready for submission (Optional • Max 3 min)</Text> */}
+                  </View>
+                  <View style={styles.mediaCardActions}>
+                    <TouchableOpacity
+                      style={styles.retakeBtn}
+                      onPress={() => setCaptureTarget('video')}
+                      activeOpacity={0.7}
+                    >
+                      <VideoIcon size={14} color="#2563EB" />
+                      <Text style={styles.retakeBtnText}>Change Video</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={styles.removeMediaBtn}
+                      onPress={() => {
+                        setVideoUri(null);
+                        setVideoDuration(null);
+                      }}
+                      activeOpacity={0.7}
+                    >
+                      <Text style={styles.removeMediaBtnText}>Remove</Text>
+                    </TouchableOpacity>
+                  </View>
                 </View>
               )}
             </View>
 
             {/* Legal Compliance & Safety Callout */}
-            <View style={styles.complianceBox}>
+            {/* <View style={styles.complianceBox}>
               <ShieldCheckIcon size={18} color="#1e40af" />
               <Text style={styles.complianceText}>
                 Submission hashes the tally cryptographically to the central collation server. Ensure all accredited party agents have witnessed the vote entries.
               </Text>
-            </View>
+            </View> */}
 
-            {/* Primary Submission Button - Strictly disabled unless all 3 media items are attached */}
+            {/* Primary Submission Button - Strictly disabled unless both photos are attached */}
             <TouchableOpacity
               style={[
                 styles.submitBtn,
@@ -692,18 +785,174 @@ export default function VoteSubmissionScreen({ operator, selectedBooth }) {
               ) : (
                 <View style={styles.btnContent}>
                   <OfficerIcon size={18} color="#ffffff" />
-                  <Text style={styles.submitBtnText}>Submit Final Votes</Text>
+                  <Text style={styles.submitBtnText}>Submit</Text>
                 </View>
               )}
             </TouchableOpacity>
-            <Text style={styles.confirmationHint}>
+            {/* <Text style={styles.confirmationHint}>
               {!isSubmissionReady
-                ? "⚠️ All 3 media items required (Image 1, Image 2 and Video)"
+                ? "⚠️ 2 photos are mandatory before submitting (Video is optional)"
                 : "Requires booth officer confirmation"}
-            </Text>
+            </Text> */}
           </View>
         }
       />
+
+      {/* Media Capture & Selection Modal Window (Camera vs Gallery / File Browser) */}
+      <Modal
+        visible={Boolean(captureTarget)}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setCaptureTarget(null)}
+      >
+        <TouchableOpacity
+          style={styles.modalBackdrop}
+          activeOpacity={1}
+          onPress={() => setCaptureTarget(null)}
+        >
+          <View style={styles.modalCard} onStartShouldSetResponder={() => true}>
+            <View style={styles.modalHandle} />
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>
+                {captureTarget === 'photo1'
+                  ? 'Photo 1'
+                  : captureTarget === 'photo2'
+                  ? 'Photo 2'
+                  : 'Video'}
+              </Text>
+              <Text style={styles.modalSubtitle}>
+                {captureTarget === 'video'
+                  ? 'Record via camera or select video from device (Max 3 min)'
+                  : 'Take photo via camera or select photo from device gallery'}
+              </Text>
+            </View>
+
+            <View style={styles.modalOptions}>
+              <TouchableOpacity
+                style={styles.modalOptionBtn}
+                onPress={() => handleCaptureOption('camera')}
+                activeOpacity={0.7}
+              >
+                <View style={styles.modalOptionIconCircle}>
+                  {captureTarget === 'video' ? (
+                    <VideoIcon size={22} color="#1e40af" />
+                  ) : (
+                    <CameraIcon size={22} color="#1e40af" />
+                  )}
+                </View>
+                <View style={styles.modalOptionTextCol}>
+                  <Text style={styles.modalOptionTitle}>
+                    {captureTarget === 'video' ? 'Record with Camera' : 'Take Photo with Camera'}
+                  </Text>
+                  <Text style={styles.modalOptionDesc}>
+                    {captureTarget === 'video'
+                      ? 'Launch camera to record video'
+                      : 'Launch camera to capture clear photo'}
+                  </Text>
+                </View>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.modalOptionBtn}
+                onPress={() => handleCaptureOption('gallery')}
+                activeOpacity={0.7}
+              >
+                <View style={styles.modalOptionIconCircle}>
+                  <GalleryIcon size={22} color="#1e40af" />
+                </View>
+                <View style={styles.modalOptionTextCol}>
+                  <Text style={styles.modalOptionTitle}>
+                    {captureTarget === 'video'
+                      ? 'Choose Video from File Browser / Gallery'
+                      : 'Choose Photo from File Browser / Gallery'}
+                  </Text>
+                  <Text style={styles.modalOptionDesc}>
+                    {captureTarget === 'video'
+                      ? 'Browse stored videos on this device (Videos only)'
+                      : 'Browse stored photos on this device (Photos only)'}
+                  </Text>
+                </View>
+              </TouchableOpacity>
+            </View>
+
+            <TouchableOpacity
+              style={styles.modalCancelBtn}
+              onPress={() => setCaptureTarget(null)}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.modalCancelBtnText}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
+      </Modal>
+
+      {/* Task 4: Full-Screen Upload Progress Modal */}
+      <Modal
+        visible={submitting}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => {}} // Strictly prevent closing by back button while uploading
+      >
+        <View style={styles.progressModalBackdrop}>
+          <View style={styles.progressModalCard}>
+            <ActivityIndicator size="large" color="#2563EB" style={{ marginBottom: 14 }} />
+            <Text style={styles.progressModalTitle}>Uploading to Server...</Text>
+            <Text style={styles.progressPercentText}>{Math.min(100, uploadProgress)}%</Text>
+
+            {/* Visual Progress Bar Track */}
+            <View style={styles.progressBarTrack}>
+              <View
+                style={[
+                  styles.progressBarFill,
+                  { width: `${Math.min(100, Math.max(0, uploadProgress))}%` },
+                ]}
+              />
+            </View>
+
+            {/* Warning Callout Box */}
+            <View style={styles.progressWarningBox}>
+              <Text style={styles.progressWarningIcon}>⚠️</Text>
+              <Text style={styles.progressWarningText}>
+                Please keep the app open and do not switch screens until the upload finishes.
+              </Text>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Task 2: Video Compression Modal */}
+      <Modal
+        visible={compressingVideo}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => {}}
+      >
+        <View style={styles.progressModalBackdrop}>
+          <View style={styles.progressModalCard}>
+            <ActivityIndicator size="large" color="#059669" style={{ marginBottom: 14 }} />
+            <Text style={styles.progressModalTitle}>Compressing Video...</Text>
+            {compressionProgress > 0 ? (
+              <Text style={styles.compressPercentText}>{compressionProgress}%</Text>
+            ) : (
+              <Text style={styles.compressSubtitleText}>Analyzing video stream...</Text>
+            )}
+
+            {/* Visual Progress Bar Track */}
+            <View style={styles.progressBarTrack}>
+              <View
+                style={[
+                  styles.compressProgressBarFill,
+                  { width: `${Math.min(100, Math.max(0, compressionProgress || 15))}%` },
+                ]}
+              />
+            </View>
+
+            {/* <Text style={styles.compressInfoText}>
+              Optimizing video resolution (720p) for high-speed transmission to server. Please wait...
+            </Text> */}
+          </View>
+        </View>
+      </Modal>
     </KeyboardAvoidingView>
   );
 }
@@ -900,46 +1149,49 @@ const styles = StyleSheet.create({
   },
   mediaCard: {
     borderWidth: 1,
-    borderColor: '#E5E7EB',
-    borderRadius: 12,
+    borderColor: '#E2E8F0',
+    borderRadius: 16,
     backgroundColor: '#FFFFFF',
-    paddingVertical: 20,
+    paddingVertical: 28,
     paddingHorizontal: 16,
     marginBottom: 16,
     width: '100%',
     alignItems: 'center',
     justifyContent: 'center',
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.03,
+    shadowRadius: 2,
+    elevation: 1,
   },
   mediaCardTablet: {
-    paddingVertical: 26,
+    paddingVertical: 32,
     paddingHorizontal: 24,
   },
   mediaCardSmall: {
-    paddingVertical: 16,
+    paddingVertical: 22,
     paddingHorizontal: 12,
   },
   iconCircle: {
-    backgroundColor: '#EEF2FF',
-    padding: 16,
-    borderRadius: 50,
+    backgroundColor: '#EFF6FF',
+    width: 64,
+    height: 64,
+    borderRadius: 32,
     alignItems: 'center',
     justifyContent: 'center',
+    marginBottom: 14,
   },
   emptyCardText: {
-    color: '#4B5563',
-    marginTop: 10,
-    fontSize: 14,
+    color: '#334155',
+    fontSize: 15.5,
+    fontWeight: '500',
     textAlign: 'center',
-    flexShrink: 1,
-    maxWidth: '100%',
-    paddingHorizontal: 10,
-    lineHeight: 18,
   },
   mediaPreview: {
     width: '100%',
     maxHeight: 520,
     borderRadius: 8,
-    marginBottom: 16,
+    marginBottom: 12,
     overflow: 'hidden',
   },
   videoPreview: {
@@ -968,6 +1220,70 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     marginLeft: 8,
     flexShrink: 1,
+  },
+  requiredSubtext: {
+    fontSize: 11,
+    color: '#dc2626',
+    marginTop: 2,
+    fontWeight: '600',
+  },
+  optionalSubtext: {
+    fontSize: 11,
+    color: '#64748b',
+    marginTop: 2,
+    fontWeight: '500',
+  },
+  mediaCardSuccess: {
+    backgroundColor: '#f0fdf4',
+    borderColor: '#86efac',
+    paddingVertical: 18,
+    paddingHorizontal: 16,
+  },
+  videoSuccessBadge: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 14,
+  },
+  videoPlayCircle: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: '#dcfce7',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 8,
+  },
+  videoSuccessTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#166534',
+    textAlign: 'center',
+  },
+  videoSuccessSubtitle: {
+    fontSize: 12,
+    color: '#15803d',
+    marginTop: 2,
+    textAlign: 'center',
+  },
+  mediaCardActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+    width: '100%',
+  },
+  removeMediaBtn: {
+    backgroundColor: '#fee2e2',
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  removeMediaBtnText: {
+    color: '#dc2626',
+    fontSize: 13,
+    fontWeight: '600',
   },
   complianceBox: {
     flexDirection: 'row',
@@ -1025,4 +1341,197 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     lineHeight: 16,
   },
+  emptyCardSubtext: {
+    fontSize: 12,
+    color: '#64748b',
+    marginTop: 4,
+    fontWeight: '500',
+    textAlign: 'center',
+  },
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(15, 23, 42, 0.65)',
+    justifyContent: 'flex-end',
+  },
+  modalCard: {
+    backgroundColor: '#ffffff',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    paddingHorizontal: 20,
+    paddingTop: 12,
+    paddingBottom: Platform.OS === 'ios' ? 36 : 24,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 10,
+  },
+  modalHandle: {
+    width: 44,
+    height: 5,
+    backgroundColor: '#cbd5e1',
+    borderRadius: 3,
+    alignSelf: 'center',
+    marginBottom: 16,
+  },
+  modalHeader: {
+    marginBottom: 20,
+    alignItems: 'center',
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: '#0f172a',
+    marginBottom: 4,
+    textAlign: 'center',
+  },
+  modalSubtitle: {
+    fontSize: 13,
+    color: '#64748b',
+    fontWeight: '500',
+    textAlign: 'center',
+  },
+  modalOptions: {
+    gap: 12,
+    marginBottom: 16,
+  },
+  modalOptionBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f8fafc',
+    borderWidth: 1.5,
+    borderColor: '#e2e8f0',
+    borderRadius: 14,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+  },
+  modalOptionIconCircle: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: '#eff6ff',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 14,
+  },
+  modalOptionTextCol: {
+    flex: 1,
+  },
+  modalOptionTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#1e40af',
+    marginBottom: 2,
+  },
+  modalOptionDesc: {
+    fontSize: 12,
+    color: '#64748b',
+  },
+  modalCancelBtn: {
+    paddingVertical: 13,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 12,
+    backgroundColor: '#f1f5f9',
+    marginTop: 4,
+  },
+  modalCancelBtnText: {
+    fontSize: 14.5,
+    fontWeight: '700',
+    color: '#475569',
+  },
+  progressModalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(15, 23, 42, 0.75)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 24,
+  },
+  progressModalCard: {
+    width: '100%',
+    maxWidth: 380,
+    backgroundColor: '#ffffff',
+    borderRadius: 20,
+    paddingVertical: 28,
+    paddingHorizontal: 24,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.25,
+    shadowRadius: 20,
+    elevation: 12,
+  },
+  progressModalTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: '#0f172a',
+    marginBottom: 6,
+    textAlign: 'center',
+  },
+  progressPercentText: {
+    fontSize: 32,
+    fontWeight: '900',
+    color: '#2563EB',
+    marginBottom: 16,
+  },
+  compressPercentText: {
+    fontSize: 28,
+    fontWeight: '900',
+    color: '#059669',
+    marginBottom: 16,
+  },
+  compressSubtitleText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#64748b',
+    marginBottom: 16,
+  },
+  progressBarTrack: {
+    width: '100%',
+    height: 10,
+    backgroundColor: '#e2e8f0',
+    borderRadius: 5,
+    overflow: 'hidden',
+    marginBottom: 18,
+  },
+  progressBarFill: {
+    height: '100%',
+    backgroundColor: '#2563EB',
+    borderRadius: 5,
+  },
+  compressProgressBarFill: {
+    height: '100%',
+    backgroundColor: '#059669',
+    borderRadius: 5,
+  },
+  progressWarningBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fffbeb',
+    borderWidth: 1,
+    borderColor: '#fde68a',
+    borderRadius: 12,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    width: '100%',
+  },
+  progressWarningIcon: {
+    fontSize: 18,
+    marginRight: 10,
+  },
+  progressWarningText: {
+    flex: 1,
+    fontSize: 12.5,
+    fontWeight: '600',
+    color: '#92400e',
+    lineHeight: 17,
+  },
+  compressInfoText: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: '#64748b',
+    textAlign: 'center',
+    lineHeight: 17,
+  },
 });
+

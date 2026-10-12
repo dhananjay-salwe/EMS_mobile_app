@@ -11,40 +11,81 @@ import {
   StatusBar,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+// import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { COLORS } from '../theme';
+
+// --- Custom Pure React Native Graphics ---
+const VoteGraphic = ({ size = 64, color = '#1e40af' }) => (
+  <View style={{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }}>
+    {/* Paper entering box */}
+    <View style={{ width: size * 0.35, height: size * 0.25, borderWidth: 4, borderColor: color, borderBottomWidth: 0, marginTop: -size * 0.1 }} />
+    {/* Ballot Box */}
+    <View style={{ width: size * 0.7, height: size * 0.5, borderWidth: 4, borderColor: color, borderRadius: 8, alignItems: 'center' }}>
+      <View style={{ width: size * 0.45, height: 4, backgroundColor: color, borderRadius: 2, marginTop: 8 }} />
+    </View>
+  </View>
+);
+
+const PlantLeafGraphic = ({ size = 64, color = '#1e40af' }) => (
+  <View style={{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }}>
+    {/* Leaf Body (Teardrop pointing up) */}
+    <View style={{
+      width: size * 0.55,
+      height: size * 0.55,
+      borderWidth: 4,
+      borderColor: color,
+      borderTopLeftRadius: 4, // Sharp tip
+      borderTopRightRadius: size * 0.275, // Rounded side
+      borderBottomLeftRadius: size * 0.275, // Rounded side
+      borderBottomRightRadius: size * 0.275, // Rounded bottom
+      transform: [{ rotate: '45deg' }],
+      zIndex: 2,
+    }} />
+    {/* Stem & Central Vein */}
+    <View style={{
+      position: 'absolute',
+      width: 4,
+      height: size * 0.65,
+      backgroundColor: color,
+      bottom: size * 0.1,
+      borderRadius: 2,
+      zIndex: 1,
+    }} />
+  </View>
+);
+
+const SecureShieldGraphic = ({ size = 64, color = '#1e40af' }) => (
+  <View style={{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }}>
+    {/* Shield Outline */}
+    <View style={{ width: size * 0.65, height: size * 0.75, borderWidth: 4, borderColor: color, borderTopLeftRadius: 8, borderTopRightRadius: 8, borderBottomLeftRadius: size * 0.35, borderBottomRightRadius: size * 0.35, alignItems: 'center', justifyContent: 'center' }}>
+      {/* Lock Shackle */}
+      <View style={{ width: size * 0.22, height: size * 0.15, borderWidth: 3, borderColor: color, borderTopLeftRadius: size * 0.11, borderTopRightRadius: size * 0.11, borderBottomWidth: 0, marginBottom: -2 }} />
+      {/* Lock Body */}
+      <View style={{ width: size * 0.32, height: size * 0.22, backgroundColor: color, borderRadius: 4 }} />
+    </View>
+  </View>
+);
+
+// --- Updated Slides Data ---
 
 const SLIDES = [
   {
     id: '1',
-    title: 'Verify Your Polling Unit',
-    description:
-      'Confirm your assigned ward and booth details before starting official verification.',
-    icon: (
-      <Ionicons name="location-outline" size={72} color="#1e40af" />
-    ),
+    title: 'Digital Monitoring',
+    description: 'Transition seamlessly from physical logbooks to an automated digital Election Monitoring System.',
+    icon: <VoteGraphic color="#1e40af" size={68} />,
   },
   {
     id: '2',
-    title: 'Capture Visual Evidence',
-    description:
-      'Snap clear photos of sheets and record videos.',
-    icon: (
-      <Ionicons name="camera-outline" size={72} color="#1e40af" />
-    ),
+    title: 'Go-Green Elections',
+    description: 'Record polling events, capture evidence, and submit reports digitally in real time.',
+    icon: <PlantLeafGraphic color="#1e40af" size={68} />,
   },
   {
     id: '3',
-    title: 'Secure Live Transmission',
-    description:
-      'Audit entries are cryptographically synced directly to the central collation server.',
-    icon: (
-      <MaterialCommunityIcons
-        name="shield-check-outline"
-        size={72}
-        color="#1e40af"
-      />
-    ),
+    title: 'Secure Polling Data',
+    description: 'Securely submit encrypted polling data for faster monitoring and reliable election results.',
+    icon: <SecureShieldGraphic color="#1e40af" size={68} />,
   },
 ];
 
