@@ -266,34 +266,35 @@ export default function VoteSubmissionScreen({ operator, selectedBooth }) {
   const [uploadProgress, setUploadProgress] = useState(0);
   const [compressingVideo, setCompressingVideo] = useState(false);
   const [compressionProgress, setCompressionProgress] = useState(0);
-  const [loading, setLoading] = useState(true);
+  // const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [captureTarget, setCaptureTarget] = useState(null); // 'photo1' | 'photo2' | 'video'
 
-  useEffect(() => {
-    fetchCandidates();
-  }, []);
+  // useEffect(() => {
+  //   fetchCandidates();
+  // }, []);
 
-  const fetchCandidates = async () => {
-    try {
-      const data = await apiCall(
-        `/candidates/by-booth/${selectedBooth.booth_id}`
-      );
-      if (data.success) {
-        setCandidates(data.candidates);
-        const initialVotes = {};
-        data.candidates.forEach((c) => {
-          initialVotes[c.candidate_id] = "";
-        });
-        setVotes(initialVotes);
-      } else {
-        Alert.alert("Error", "Failed to load candidates for this booth.");
-      }
-    } catch (err) {
-      Alert.alert("Error", "Network request failed.");
-    } finally {
-      setLoading(false);
-    }
-  };
+  // const fetchCandidates = async () => {
+  //   try {
+  //     const data = await apiCall(
+  //       `/candidates/by-booth/${selectedBooth.booth_id}`
+  //     );
+  //     if (data.success) {
+  //       setCandidates(data.candidates);
+  //       const initialVotes = {};
+  //       data.candidates.forEach((c) => {
+  //         initialVotes[c.candidate_id] = "";
+  //       });
+  //       setVotes(initialVotes);
+  //     } else {
+  //       Alert.alert("Error", "Failed to load candidates for this booth.");
+  //     }
+  //   } catch (err) {
+  //     Alert.alert("Error", "Network request failed.");
+  //   } finally {
+  //     setLoading(false);
+  //   }
+  // };
 
   const updateVote = (candidateId, text) => {
     // Only allow numeric input
