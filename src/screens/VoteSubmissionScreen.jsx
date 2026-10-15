@@ -264,6 +264,9 @@ export default function VoteSubmissionScreen({ operator, selectedBooth }) {
   const [photo2Aspect, setPhoto2Aspect] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
+
+  const [uploadSuccess, setUploadSuccess] = useState(false);
+
   const [compressingVideo, setCompressingVideo] = useState(false);
   const [compressionProgress, setCompressionProgress] = useState(0);
   // const [loading, setLoading] = useState(true);
@@ -493,6 +496,9 @@ export default function VoteSubmissionScreen({ operator, selectedBooth }) {
     setSubmitting(true);
     setUploadProgress(0);
 
+    setUploadSuccess(false);
+    let isSuccess = false;
+
     // Keep mobile screen on during heavy file uploads
     try {
       await activateKeepAwakeAsync();
@@ -539,10 +545,14 @@ export default function VoteSubmissionScreen({ operator, selectedBooth }) {
       );
 
       if (data.success) {
-        Alert.alert(
-          "Upload Successful!",
-          "Your photo/video evidance have been uploaded successfully.",
-        );
+
+        isSuccess = true;
+        // Alert.alert(
+        //   "Upload Successful!",
+        //   "Your photo/video evidance have been uploaded successfully.",
+        // );
+
+        setUploadSuccess(true);
 
         // Reset form for potential re-submission
         const resetVotes = {};
@@ -565,8 +575,15 @@ export default function VoteSubmissionScreen({ operator, selectedBooth }) {
       try {
         deactivateKeepAwake();
       } catch (_) {}
+      // setSubmitting(false);
+      // setUploadProgress(0);
       setSubmitting(false);
-      setUploadProgress(0);
+
+      // if(isSuccess){
+      //   setSubmitting(false);
+      //   setUploadProgress(0);
+      // } 
+
     }
   };
 
@@ -888,35 +905,101 @@ export default function VoteSubmissionScreen({ operator, selectedBooth }) {
       </Modal>
 
       {/* Task 4: Full-Screen Upload Progress Modal */}
-      <Modal
-        visible={submitting}
+      {/* <Modal */}
+        {/* visible={submitting}
         transparent={true}
         animationType="fade"
-        onRequestClose={() => {}} // Strictly prevent closing by back button while uploading
-      >
-        <View style={styles.progressModalBackdrop}>
+        onRequestClose={() => {}} // Strictly prevent closing by back button while uploading */}
+      {/* > */}
+        {/* <View style={styles.progressModalBackdrop}>
           <View style={styles.progressModalCard}>
             <ActivityIndicator size="large" color="#2563EB" style={{ marginBottom: 14 }} />
             <Text style={styles.progressModalTitle}>Uploading to Server...</Text>
-            <Text style={styles.progressPercentText}>{Math.min(100, uploadProgress)}%</Text>
+            <Text style={styles.progressPercentText}>{Math.min(100, uploadProgress)}%</Text> */}
 
             {/* Visual Progress Bar Track */}
-            <View style={styles.progressBarTrack}>
+            {/* <View style={styles.progressBarTrack}>
               <View
                 style={[
                   styles.progressBarFill,
                   { width: `${Math.min(100, Math.max(0, uploadProgress))}%` },
                 ]}
               />
-            </View>
+            </View> */}
 
             {/* Warning Callout Box */}
-            <View style={styles.progressWarningBox}>
+            {/* <View style={styles.progressWarningBox}>
               <Text style={styles.progressWarningIcon}>⚠️</Text>
               <Text style={styles.progressWarningText}>
                 Please keep the app open and do not switch screens until the upload finishes.
               </Text>
             </View>
+          </View>
+        </View>
+      </Modal> */}
+
+      {/* Task 4: Full-Screen Upload Progress Modal */}
+      <Modal
+        visible={submitting || uploadSuccess}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => {}} // Strictly prevent closing by back button while uploading
+      >
+        <View style={styles.progressModalBackdrop}>
+          <View style={styles.progressModalCard}>
+            
+            {/* --- NEW CODE: Conditional rendering for Success UI vs Progress UI --- */}
+            {uploadSuccess ? (
+              <View style={{ alignItems: 'center', paddingVertical: 10 }}>
+                <View style={{ 
+                  width: 72, height: 72, borderRadius: 36, 
+                  backgroundColor: '#dcfce7', alignItems: 'center', 
+                  justifyContent: 'center', marginBottom: 16 
+                }}>
+                  <Text style={{ fontSize: 36, fontWeight: '900', color: '#16a34a' }}>✓</Text>
+                </View>
+                <Text style={styles.progressModalTitle}>Upload Successful!</Text>
+                <Text style={[styles.compressInfoText, { marginBottom: 24, fontSize: 14, color: '#334155' }]}>
+                  Your photo/video evidence have been uploaded successfully.
+                </Text>
+                <TouchableOpacity 
+                  style={[styles.submitBtn, { width: 140, height: 46 }]} 
+                  onPress={() => {
+                    setUploadSuccess(false);
+                    // setSubmitting(false);
+                    setUploadProgress(0);
+                  }}
+                  activeOpacity={0.8}
+                >
+                  <Text style={styles.submitBtnText}>OK</Text>
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <>
+                <ActivityIndicator size="large" color="#2563EB" style={{ marginBottom: 14 }} />
+                <Text style={styles.progressModalTitle}>Uploading to Server...</Text>
+                <Text style={styles.progressPercentText}>{Math.min(100, uploadProgress)}%</Text>
+
+                {/* Visual Progress Bar Track */}
+                <View style={styles.progressBarTrack}>
+                  <View
+                    style={[
+                      styles.progressBarFill,
+                      { width: `${Math.min(100, Math.max(0, uploadProgress))}%` },
+                    ]}
+                  />
+                </View>
+
+                {/* Warning Callout Box */}
+                <View style={styles.progressWarningBox}>
+                  <Text style={styles.progressWarningIcon}>⚠️</Text>
+                  <Text style={styles.progressWarningText}>
+                    Please keep the app open and do not switch screens until the upload finishes.
+                  </Text>
+                </View>
+              </>
+            )}
+
           </View>
         </View>
       </Modal>
